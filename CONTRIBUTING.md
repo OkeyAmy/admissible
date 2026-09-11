@@ -70,8 +70,6 @@ silent, wrong result.
    `(chainKey, blockHeight, txIndex)`, so one `multiAttest` transaction carries many
    attestations and the query can never be replayed to pick up the ones you skipped.
 5. **Treat `BlockNotOnSourceChain` as retryable.** It means *too recent*, not *wrong*.
-6. **Say "Attestcoin Protocol", not "USC"**, except where `usc-sdk` is the literal package
-   name.
 
 ## Evidence discipline
 

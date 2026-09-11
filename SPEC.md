@@ -1,26 +1,5 @@
 # Admissible — canonical build spec
 
-> ### ⚠️ NAME CHANGE — 2026-09-10, supersedes everything below and every earlier instruction
-> The project was renamed from **Vouchsafe** to **Admissible**. The npm name `vouchsafe` is taken by an
-> unrelated but semantically adjacent package ("attestations, vouches, revocations, multi-hop trust chains"),
-> which would have hijacked the judge's `npx` command and confused search.
->
-> | Was | Now |
-> |---|---|
-> | product / wordmark `vouchsafe` | **`admissible`** (lowercase everywhere in UI) |
-> | `@vouchsafe/sdk` | **`@admissible/sdk`** |
-> | CLI bin `vouchsafe` | **`admissible`** |
-> | judge command | **`npx admissible verify 0x<EAS_UID>`** |
-> | `IVouchsafeRegistry.sol` | **`IAdmissibleRegistry.sol`** |
-> | domain in comps `vouchsafe.xyz` | **`admissible.xyz`** |
->
-> The subline is unchanged and now contains the product name, which is deliberate:
-> **"Ethereum attestations, admissible on Creditcoin."**
->
-> **The directory is still named `vouchsafe/`** and stays that way until all build agents finish —
-> renaming it mid-flight would break absolute paths. Use the existing paths; the directory gets renamed at the end.
-> Do not rename the folder yourself.
-
 **Every agent working on this repo reads this file first. All facts below were verified live against the real network on 2026-09-10. Do not re-derive them. Do not "fix" them.**
 
 Hackathon: BUIDL CTC 2026 Fall (DoraHacks) · Sponsor: Creditcoin / Credit Labs · Track: **RWA**
@@ -334,7 +313,6 @@ export interface MirrorProgress {
 - **Must be deployed on a testnet** (CC3). Deployed addresses go in the README.
 - **Must integrate the Attestcoin Protocol as a core feature**, with working integration code and a dedicated technical document (`docs/attestcoin-integration.md`). Depth of Attestcoin utilisation is an explicit core scoring criterion.
 - **Attribute third-party IP.** EAS is MIT. `@gluwa/asc-contracts`, `@gluwa/usc-sdk`, and patterns adapted from `github.com/gluwa/attestcoin-protocol-examples` are the organizer's. The README must state plainly which files derive from the official examples and which are new.
-- Say **"Attestcoin Protocol"**, never "USC". The rename is recent and the sponsor cares.
 
 ## 9. Evidence discipline (this is how the project is judged)
 
