@@ -53,7 +53,7 @@ function loadGeneratedAbi(): InterfaceAbi | null {
   return null;
 }
 
-/** The ABI actually in use, preferring the contracts agent's generated file. */
+/** The ABI actually in use, preferring the generated file from the contracts build. */
 export function registryAbi(): InterfaceAbi {
   if (cachedAbi) return cachedAbi;
   const generated = loadGeneratedAbi();
@@ -72,7 +72,7 @@ export function registryAbiSource(): string {
   return cachedAbiSource!;
 }
 
-/** Forget the cached ABI — used after the contracts agent writes the file. */
+/** Forget the cached ABI — used after the contracts build rewrites the file. */
 export function reloadRegistryAbi(): void {
   cachedAbi = undefined;
   cachedAbiSource = undefined;

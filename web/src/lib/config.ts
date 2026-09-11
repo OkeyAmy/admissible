@@ -1,5 +1,4 @@
-// Every value here was verified live against the network on 2026-09-10 and is
-// frozen by SPEC.md §3. Do not re-derive.
+// Every value here was verified live against the network on 2026-09-10.
 import type { ChainKey } from './types';
 
 const env = import.meta.env as Record<string, string | undefined>;

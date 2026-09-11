@@ -118,7 +118,7 @@ async function main() {
 
   const summary = {
     generatedAt: new Date().toISOString(),
-    receiptsFile: MIRRORS_PATH,
+    receiptsFile: 'receipts/mirrors.jsonl',
     totalLines: lines.length,
     overall,
     perChainKey: perChain,

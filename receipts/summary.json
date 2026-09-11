@@ -1,36 +1,36 @@
 {
-  "generatedAt": "2026-09-11T12:11:22.929Z",
-  "receiptsFile": "/home/okey/Desktop/Projects/attest/vouchsafe/receipts/mirrors.jsonl",
-  "totalLines": 8981,
+  "generatedAt": "2026-09-11T12:50:03.594Z",
+  "receiptsFile": "receipts/mirrors.jsonl",
+  "totalLines": 13354,
   "overall": {
-    "attestationsAttempted": 8981,
+    "attestationsAttempted": 13354,
     "mirrored": 788,
-    "alreadyMirrored": 7633,
-    "failed": 560,
+    "alreadyMirrored": 11899,
+    "failed": 667,
     "distinctTransactions": 477,
     "ctcSpent": "0.169945168",
     "proofLatencyMs": {
       "median": 2474,
-      "p95": 8934,
+      "p95": 8786,
       "min": 238,
       "max": 22111,
-      "n": 1037
+      "n": 1115
     },
     "submitLatencyMs": {
-      "median": 11738,
-      "p95": 23873,
+      "median": 11817,
+      "p95": 23619,
       "min": 516,
       "max": 182134,
-      "n": 1037
+      "n": 1115
     }
   },
   "perChainKey": [
     {
       "chainKey": 1,
-      "attestationsAttempted": 5013,
+      "attestationsAttempted": 7988,
       "mirrored": 226,
-      "alreadyMirrored": 4526,
-      "failed": 261,
+      "alreadyMirrored": 7495,
+      "failed": 267,
       "distinctTransactions": 54,
       "ctcSpent": "0.025928202",
       "proofLatencyMs": {
@@ -50,25 +50,25 @@
     },
     {
       "chainKey": 3,
-      "attestationsAttempted": 3968,
+      "attestationsAttempted": 5366,
       "mirrored": 562,
-      "alreadyMirrored": 3107,
-      "failed": 299,
+      "alreadyMirrored": 4404,
+      "failed": 400,
       "distinctTransactions": 423,
       "ctcSpent": "0.144016966",
       "proofLatencyMs": {
-        "median": 3813,
-        "p95": 9264,
+        "median": 3726,
+        "p95": 9220,
         "min": 701,
         "max": 22111,
-        "n": 700
+        "n": 778
       },
       "submitLatencyMs": {
-        "median": 11060,
-        "p95": 25215,
+        "median": 11101.5,
+        "p95": 25163,
         "min": 516,
         "max": 182134,
-        "n": 700
+        "n": 778
       }
     }
   ]

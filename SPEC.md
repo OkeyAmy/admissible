@@ -1,6 +1,6 @@
 # Admissible — canonical build spec
 
-**Every agent working on this repo reads this file first. All facts below were verified live against the real network on 2026-09-10. Do not re-derive them. Do not "fix" them.**
+All facts below were verified live against the real network on 2026-09-10.
 
 Hackathon: BUIDL CTC 2026 Fall (DoraHacks) · Sponsor: Creditcoin / Credit Labs · Track: **RWA**
 Deadline: **2026-09-13 23:59 ET**.
@@ -35,7 +35,7 @@ Registry stores (chainKey, uid) → MirroredAttestation.  Any Creditcoin contrac
 
 Revocation runs the identical path over the `Revoked` event and flips `revoked = true`.
 
-## 3. Verified network facts — DO NOT CHANGE
+## 3. Verified network facts
 
 ### Creditcoin CC3 testnet
 | | |
@@ -45,7 +45,7 @@ Revocation runs the identical path over the `Revoked` event and flips `revoked =
 | Native token | CTC |
 | ChainInfo precompile | `0x0000000000000000000000000000000000000fd3` |
 | BlockProver precompile | `0x0000000000000000000000000000000000000FD2` |
-| Explorer | `https://creditcoin-testnet.blockscout.com` — **SETTLED, do not change again without new evidence.** `explorer.cc3-testnet.creditcoin.network` does not resolve. `creditcoin3-testnet.subscan.io` resolves but returns "Account Not Found" for our real deployed contract (confirmed live in-browser by the user) — its indexer does not cover this contract, possibly this testnet's EVM side at all. Blockscout's REST API (`/api/v2/addresses/{addr}`, `/api/v2/transactions/{hash}`) returns genuinely correct data verified against our real deploy tx and registry address — `creation_transaction_hash` and block number match exactly, checked with `curl`, not a guess from an HTTP 200. Link pattern: `{explorer}/tx/{hash}` for transactions, `{explorer}/address/{addr}` for accounts/contracts. If re-verifying, use the JSON API, never just an HTTP status code or a `<title>` tag — Subscan is a client-hydrated SPA that returns 200 with a generic shell regardless of whether the data exists. |
+| Explorer | `https://creditcoin-testnet.blockscout.com` — its REST API returns correct data for our deploys and transactions (verified with `curl`). Link pattern: `{explorer}/tx/{hash}` for transactions, `{explorer}/address/{addr}` for accounts/contracts. |
 | ASC dashboard | `https://dashboard.cc3-testnet.creditcoin.network/` |
 
 ### Attestcoin prover service
@@ -163,32 +163,24 @@ vouchsafe/
 ├── bench/              receipts generator at volume
 ├── web/                Vite + React + TS — dark landing + cream app
 ├── receipts/           mirrors.jsonl — the evidence artifact, committed
-├── docs/               attestcoin-integration.md, design-refs/
-├── prebuild-evidence/  pre-build measurements (already present, do not modify)
+├── docs/               attestcoin-integration.md and supporting docs
+├── prebuild-evidence/  pre-build measurements (baseline)
 └── .env                already generated (gitignored) — see below
 ```
 
 Toolchain: **Node 22, pnpm 11.18.0 workspaces, Foundry 1.7.1, Solidity ^0.8.28.**
 
-> **CORRECTION (2026-09-10, supersedes any earlier instruction saying "npm workspaces" or "pnpm unavailable").**
-> pnpm **is** installed at `/usr/local/bin/pnpm` — an earlier probe misread it (pnpm and npm both report version `11.18.0`, which is what caused the confusion) and the repo was briefly set up on npm workspaces. **This is the user's preferred package manager.** The repo has been migrated:
-> - `pnpm-workspace.yaml` defines the workspace (`packages/*`, `worker`, `web`, `bench`); the `workspaces` field is **gone** from `package.json`.
-> - `package-lock.json` deleted, `pnpm-lock.yaml` committed. `packageManager: pnpm@11.18.0` is pinned.
-> - `.npmrc` sets **`node-linker=hoisted`** on purpose: `foundry.toml` remaps `@gluwa/asc-contracts/=node_modules/@gluwa/asc-contracts/`, so a flat npm-like layout keeps Foundry resolving unchanged. **Do not remove this setting.**
-> - Build-script allowlists live in `pnpm-workspace.yaml` under `onlyBuiltDependencies` (pnpm 11 no longer reads the `pnpm` field in `package.json`). `esbuild` is allowlisted there because Vite needs it.
->
-> **Use `pnpm` for every command from now on** — `pnpm install`, `pnpm add -F web <dep>`, `pnpm -F web build`, `pnpm -r build`. Do **not** run `npm install` or `npm ci`; it will resurrect `package-lock.json` and fight the lockfile.
-> Verified after migration: `forge build` succeeds and `forge test` reports **41 passed, 0 failed**.
+**Package manager: pnpm 11.18.0** (pinned via `packageManager: pnpm@11.18.0`). The workspace is defined by `pnpm-workspace.yaml` (`packages/*`, `worker`, `web`, `bench`); there is no `workspaces` field in `package.json`. `.npmrc` sets `node-linker=hoisted` because `foundry.toml` remaps `@gluwa/asc-contracts/=node_modules/@gluwa/asc-contracts/`. Build-script allowlists live in `pnpm-workspace.yaml` under `onlyBuiltDependencies` (pnpm 11 no longer reads the `pnpm` field in `package.json`); `esbuild` is allowlisted there because Vite needs it. Verified: `forge build` succeeds and `forge test` reports **41 passed, 0 failed**.
 
 ## 6. Environment
 
-`.env` is **already generated** at repo root with the dev wallet and every endpoint above. Load it; do not regenerate it. Deployer address: `0xA5B3d738FB24C880a2BB1Bc4Ec65475489889714` (testnet only). `REGISTRY_ADDRESS` is filled in after deploy.
+Environment is configured via `.env` at repo root (gitignored) with the dev wallet and every endpoint above. Deployer address: `0xA5B3d738FB24C880a2BB1Bc4Ec65475489889714` (testnet only). `REGISTRY_ADDRESS` is set after deploy.
 
-**Testnet CTC is FUNDED: 10,000 CTC confirmed on the deployer address.** At ~3–5×10⁻⁵ CTC per verification this is effectively unlimited (millions of verifications). **There is no funding constraint on evidence volume — do not write code that rations submissions, and do not hedge the numbers in any doc.** Target thousands of mirrored attestations, not hundreds.
+Testnet CTC: **10,000 CTC funded on the deployer address**. At ~3–5×10⁻⁵ CTC per verification this supports millions of verifications, so evidence volume is not constrained by funding.
 
 ## 7. Design system — non-negotiable, shared by every UI surface
 
-The product has **two moods on purpose**: a dark cinematic threshold (the landing) that opens into a warm, calm, document-like workspace (the app). Reference comps live in `docs/design-refs/`.
+The product has **two moods on purpose**: a dark cinematic threshold (the landing) that opens into a warm, calm, document-like workspace (the app).
 
 ### Palette
 ```
@@ -215,14 +207,14 @@ Lime is **exclusively** for action and liveness. Never decorative. On the dark l
 ### Motion
 Slow and confident. `cubic-bezier(0.16, 1, 0.3, 1)`, 600–900 ms for entrances. The landing headline and rule fade up in sequence. Respect `prefers-reduced-motion` everywhere. No bounce, no spring, nothing playful — this is an evidence product.
 
-### Landing page (`/`) — match `docs/design-refs/Pasted image (4).png`
+### Landing page (`/`)
 - Full-bleed background: `web/public/media/hero-threshold.png` (already copied — the dark room with the vertical slit of golden light). `object-fit: cover`, centered. A subtle vignette on top so text stays legible at any viewport.
 - Top-left: wordmark `admissible`, small, wide-tracked, cream.
 - Left third, optically centered: headline **"They already wrote it."** in serif, cream. Below it a **hairline rule** about 210px wide. Below that, the subline **"Ethereum attestations, admissible on Creditcoin."** small, serif, warm-grey.
 - Bottom-right: **"Enter"** → routes to `/app`. Underline on hover, no button chrome.
 - The whole page is quiet. No cards, no nav bar, no feature grid above the fold. Below the fold, a restrained scroll section may explain the mechanism — keep the same dark ground and warm accents.
 
-### App page (`/app`) — match `docs/design-refs/Pasted image (1).png`
+### App page (`/app`)
 - Background `--cream`, full height.
 - Header: `admissible` wordmark left (grotesque, ~1.75rem, `--graphite`); `docs` link right.
 - Centered stack, generous vertical whitespace:
@@ -233,9 +225,9 @@ Slow and confident. `cubic-bezier(0.16, 1, 0.3, 1)`, 600–900 ms for entrances.
 
 Keep both moods coherent: same serif, same rule weights, same slow motion. The cream app is the dark landing with the lights turned on.
 
-## 7b. THE FROZEN INTERFACE — every agent builds against this
+## 7b. The frozen interface
 
-This is the contract between the contracts, the SDK, the worker, and the web app. It is frozen so all four can be built in parallel. **If you believe it needs to change, say so in your report — do not change it unilaterally.**
+This is the contract between the contracts, the SDK, the worker, and the web app. It is frozen so all four can be built in parallel.
 
 ```solidity
 // contracts/src/IAdmissibleRegistry.sol
@@ -305,11 +297,11 @@ export interface MirrorProgress {
 }
 ```
 
-`mirror()` MUST accept an `onProgress: (p: MirrorProgress) => void` callback — the web app renders the five live stages from it. That callback is the demo.
+`mirror()` accepts an `onProgress: (p: MirrorProgress) => void` callback; the web app renders the five live stages from it.
 
 ## 8. Hard rules from the hackathon (must not be violated)
 
-- **Original work created during the hackathon.** Everything in `vouchsafe/` is new. **Do not import or vendor the DRS repo** (`github.com/OkeyAmy/DRS`) — it predates the event.
+- **Original work created during the hackathon.** Everything in this repo is new code written for this event; nothing predates it.
 - **Must be deployed on a testnet** (CC3). Deployed addresses go in the README.
 - **Must integrate the Attestcoin Protocol as a core feature**, with working integration code and a dedicated technical document (`docs/attestcoin-integration.md`). Depth of Attestcoin utilisation is an explicit core scoring criterion.
 - **Attribute third-party IP.** EAS is MIT. `@gluwa/asc-contracts`, `@gluwa/usc-sdk`, and patterns adapted from `github.com/gluwa/attestcoin-protocol-examples` are the organizer's. The README must state plainly which files derive from the official examples and which are new.
