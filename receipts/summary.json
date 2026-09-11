@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-09-11T11:57:28.303Z",
+  "receiptsFile": "/home/okey/Desktop/Projects/attest/vouchsafe/receipts/mirrors.jsonl",
+  "totalLines": 6546,
+  "overall": {
+    "attestationsAttempted": 6546,
+    "mirrored": 601,
+    "alreadyMirrored": 5427,
+    "failed": 518,
+    "distinctTransactions": 362,
+    "ctcSpent": "0.1210366695",
+    "proofLatencyMs": {
+      "median": 2104,
+      "p95": 7799,
+      "min": 238,
+      "max": 22111,
+      "n": 816
+    },
+    "submitLatencyMs": {
+      "median": 11279,
+      "p95": 20549,
+      "min": 516,
+      "max": 182134,
+      "n": 816
+    }
+  },
+  "perChainKey": [
+    {
+      "chainKey": 1,
+      "attestationsAttempted": 3663,
+      "mirrored": 226,
+      "alreadyMirrored": 3182,
+      "failed": 255,
+      "distinctTransactions": 54,
+      "ctcSpent": "0.025928202",
+      "proofLatencyMs": {
+        "median": 1949,
+        "p95": 2474,
+        "min": 238,
+        "max": 2474,
+        "n": 337
+      },
+      "submitLatencyMs": {
+        "median": 13514,
+        "p95": 20549,
+        "min": 1032,
+        "max": 26189,
+        "n": 337
+      }
+    },
+    {
+      "chainKey": 3,
+      "attestationsAttempted": 2883,
+      "mirrored": 375,
+      "alreadyMirrored": 2245,
+      "failed": 263,
+      "distinctTransactions": 308,
+      "ctcSpent": "0.0951084675",
+      "proofLatencyMs": {
+        "median": 3421,
+        "p95": 9127,
+        "min": 701,
+        "max": 22111,
+        "n": 479
+      },
+      "submitLatencyMs": {
+        "median": 10511,
+        "p95": 20357,
+        "min": 516,
+        "max": 182134,
+        "n": 479
+      }
+    }
+  ]
+}

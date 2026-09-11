@@ -1,0 +1,23 @@
+{
+  "name": "vouchsafe",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Ethereum attestations, admissible on Creditcoin. Built on the Attestcoin Protocol.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "web:dev": "pnpm -F web dev",
+    "worker:start": "pnpm -F worker start",
+    "bench": "pnpm -F bench bench"
+  },
+  "dependencies": {
+    "@gluwa/asc-contracts": "^0.2.1",
+    "@gluwa/usc-sdk": "^0.18.0",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0"
+  },
+  "packageManager": "pnpm@11.18.0"
+}

@@ -1,0 +1,467 @@
+/* /app — the paste surface and the live proof theatre. */
+
+.mirror-stage {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+/* ------------------------------------------------------------- the prompt */
+
+.prompt {
+  padding-block: clamp(3rem, 12vh, 8.5rem) clamp(2rem, 7vh, 4rem);
+  max-width: 44rem;
+}
+
+.prompt-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(3.5rem, 11vw, 7.5rem);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  color: var(--graphite);
+  margin-bottom: clamp(1.8rem, 4vw, 2.6rem);
+}
+
+.prompt-title span {
+  display: block;
+}
+
+.prompt-title .rise:nth-child(1) {
+  animation-delay: 60ms;
+}
+.prompt-title .rise:nth-child(2) {
+  animation-delay: 180ms;
+}
+
+.paste-row {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.paste-row .field {
+  flex: 1 1 auto;
+  border-right: 0;
+}
+
+/* The only saturated element on the page. */
+.submit-square {
+  flex: 0 0 auto;
+  width: 4.5rem;
+  border: 1px solid var(--lime-deep);
+  background: var(--lime);
+  color: var(--graphite);
+  border-radius: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 1.35rem;
+  line-height: 1;
+  transition: background var(--dur-quick) var(--ease);
+}
+
+.submit-square:hover:not(:disabled) {
+  background: var(--lime-deep);
+}
+
+.submit-square:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.prompt-sub {
+  margin-top: 1.1rem;
+  font-size: 0.9375rem;
+  color: var(--graphite-soft);
+}
+
+.prompt-error {
+  margin-top: 0.9rem;
+  font-size: 0.875rem;
+  color: var(--graphite);
+  border-left: 2px solid var(--warm-light);
+  padding-left: 0.8rem;
+}
+
+.prompt-controls {
+  margin-top: 1.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem 1.4rem;
+}
+
+.prompt-controls .label {
+  font-family: var(--grotesque);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--graphite-soft);
+}
+
+.examples {
+  margin-top: 2.2rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--rule);
+}
+
+.examples-title {
+  font-family: var(--grotesque);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--graphite-soft);
+  margin-bottom: 0.9rem;
+}
+
+.example-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  padding: 0.7rem 0;
+  cursor: pointer;
+  transition: opacity var(--dur-quick) var(--ease);
+}
+
+.example-row:last-child {
+  border-bottom: 0;
+}
+
+.example-row:hover {
+  opacity: 0.62;
+}
+
+.example-row .uid {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--graphite);
+  overflow-wrap: anywhere;
+}
+
+.example-row .note {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--graphite-soft);
+}
+
+/* ------------------------------------------------------------ the theatre */
+
+.theatre {
+  padding-block: clamp(2.4rem, 6vw, 4rem) clamp(2.4rem, 6vw, 4rem);
+}
+
+.theatre-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.2rem;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.theatre-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2rem, 5.2vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.theatre-subject {
+  margin-top: 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--graphite-soft);
+  overflow-wrap: anywhere;
+}
+
+.theatre-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* Stage list --------------------------------------------------------------- */
+
+.stages {
+  list-style: none;
+  margin-top: 0.4rem;
+}
+
+.stage {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  column-gap: 1.1rem;
+  position: relative;
+}
+
+.stage-rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+/* The vertical thread linking the five stages. */
+.stage-rail::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--rule);
+}
+
+.stage:first-child .stage-rail::before {
+  top: 1.65rem;
+}
+
+.stage:last-child .stage-rail::before {
+  bottom: calc(100% - 1.65rem);
+}
+
+.stage-dot {
+  position: relative;
+  margin-top: 1.35rem;
+  width: 7px;
+  height: 7px;
+  background: var(--cream);
+  box-shadow: 0 0 0 1px var(--graphite-faint);
+  z-index: 1;
+}
+
+.stage.is-done .stage-dot {
+  background: var(--graphite);
+  box-shadow: 0 0 0 1px var(--graphite);
+}
+
+/* Lime is used here and only here on this page besides the submit button:
+   it marks what is live right now. */
+.stage.is-active .stage-dot {
+  background: var(--lime);
+  box-shadow: 0 0 0 1px var(--lime-deep);
+  animation: pulseLive 1.9s var(--ease) infinite;
+}
+
+.stage.is-failed .stage-dot {
+  background: var(--warm-light);
+  box-shadow: 0 0 0 1px var(--warm-light);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage.is-active .stage-dot {
+    animation: none;
+  }
+}
+
+.stage-body {
+  padding-block: 1rem 1.3rem;
+  border-bottom: 1px solid var(--rule);
+  min-width: 0;
+}
+
+.stage:last-child .stage-body {
+  border-bottom: 0;
+}
+
+.stage-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stage-index {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--graphite-faint);
+}
+
+.stage-name {
+  font-family: var(--grotesque);
+  font-size: 1.0625rem;
+  letter-spacing: -0.005em;
+  color: var(--graphite-faint);
+  transition: color var(--dur-quick) var(--ease);
+}
+
+.stage.is-active .stage-name,
+.stage.is-done .stage-name,
+.stage.is-failed .stage-name {
+  color: var(--graphite);
+}
+
+.stage-elapsed {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--graphite-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-desc {
+  margin-top: 0.3rem;
+  font-size: 0.875rem;
+  color: var(--graphite-soft);
+  max-width: 56ch;
+}
+
+.stage.is-pending .stage-desc {
+  color: var(--graphite-faint);
+}
+
+.stage-detail {
+  margin-top: 0.95rem;
+  animation: fadeIn var(--dur-quick) var(--ease) both;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.85rem 1.6rem;
+  margin: 0;
+}
+
+.fact-label {
+  font-family: var(--grotesque);
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--graphite-soft);
+}
+
+.fact-value {
+  margin: 0.22rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--graphite);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.fact-value.big {
+  font-size: 1.05rem;
+}
+
+/* The height counter for stage 2. */
+.counter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.55rem;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.counter-now {
+  font-size: clamp(1.35rem, 3.4vw, 1.9rem);
+  letter-spacing: -0.02em;
+}
+
+.counter-sep {
+  color: var(--graphite-faint);
+}
+
+.counter-target {
+  font-size: 1rem;
+  color: var(--graphite-soft);
+}
+
+.counter-delta {
+  font-family: var(--grotesque);
+  font-size: 0.8125rem;
+  color: var(--graphite-soft);
+}
+
+.precompile-note {
+  margin-top: 0.7rem;
+  font-size: 0.75rem;
+  color: var(--graphite-soft);
+}
+
+.precompile-note code {
+  font-family: var(--mono);
+  color: var(--graphite);
+}
+
+.waiting-line {
+  margin-top: 0.8rem;
+  border-left: 2px solid var(--warm-light);
+  padding: 0.15rem 0 0.15rem 0.8rem;
+  font-size: 0.8125rem;
+  color: var(--graphite-soft);
+  max-width: 62ch;
+}
+
+.waiting-line strong {
+  color: var(--graphite);
+  font-weight: 500;
+}
+
+.stage-error {
+  margin-top: 0.8rem;
+  border-left: 2px solid var(--warm-light);
+  padding-left: 0.8rem;
+  font-size: 0.8125rem;
+  color: var(--graphite);
+  max-width: 62ch;
+  overflow-wrap: anywhere;
+}
+
+/* Verdict ------------------------------------------------------------------ */
+
+.verdict {
+  margin-top: clamp(2rem, 5vw, 3rem);
+  border-top: 1px solid var(--graphite);
+  padding-top: 1.4rem;
+}
+
+.verdict-word {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 7vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.verdict-note {
+  margin-top: 0.8rem;
+  font-size: 0.9375rem;
+  color: var(--graphite-soft);
+  max-width: var(--measure);
+}
+
+.verdict-links {
+  margin-top: 1.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  font-size: 0.9375rem;
+}
+
+.verdict-links a {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 2px;
+  transition: border-color var(--dur-quick) var(--ease);
+}
+
+.verdict-links a:hover {
+  border-bottom-color: var(--graphite);
+}
+
+@media (max-width: 560px) {
+  .submit-square {
+    width: 3.6rem;
+    font-size: 1.15rem;
+  }
+  .stage {
+    grid-template-columns: 1.4rem 1fr;
+    column-gap: 0.8rem;
+  }
+}

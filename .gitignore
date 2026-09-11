@@ -1,0 +1,25 @@
+.env
+node_modules
+out
+cache
+dist
+broadcast
+.DS_Store
+.impeccable/
+
+# Internal prep materials — not for the public repo.
+# The deck/whitepaper is submitted as a PDF URL, the demo script and submission
+# checklist are for the author only. None are referenced by the /docs site or by
+# any committed doc (web/src/routes/Docs.tsx imports only the six product pages).
+docs/DECK.md
+docs/DEMO-SCRIPT.md
+docs/SUBMISSION.md
+docs/design-refs/
+
+# Generated/runtime state — never hand-meaningful, regenerated on build or on
+# the next process tick. web/public/receipts/* is copied at build time from
+# the real receipts/ (below) by web/scripts/sync-assets.mjs; the source of
+# truth stays tracked, the copy doesn't.
+*.tsbuildinfo
+worker/state.json
+web/public/receipts/

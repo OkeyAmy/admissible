@@ -1,0 +1,48 @@
+{
+  "name": "@admissible/sdk",
+  "version": "0.1.0",
+  "description": "Ethereum attestations, admissible on Creditcoin. Mirror, resolve and verify EAS attestations through the Attestcoin Protocol.",
+  "license": "MIT",
+  "keywords": [
+    "eas",
+    "attestation",
+    "creditcoin",
+    "attestcoin",
+    "ethereum"
+  ],
+  "main": "./dist/cjs/src/index.js",
+  "module": "./dist/esm/src/index.js",
+  "types": "./dist/types/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/src/index.d.ts",
+      "import": "./dist/esm/src/index.js",
+      "require": "./dist/cjs/src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "admissible": "./dist/cjs/bin/admissible.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "npm run clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.types.json && node scripts/fixup.mjs",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "cli": "node dist/cjs/bin/admissible.js"
+  },
+  "dependencies": {
+    "@gluwa/usc-sdk": "0.18.0",
+    "ethers": "^6.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

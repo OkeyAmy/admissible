@@ -1,0 +1,535 @@
+/* The cream workspace: the dark landing with the lights turned on. */
+
+.shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--cream);
+  color: var(--graphite);
+}
+
+.shell-inner {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+/* ------------------------------------------------------------------ header */
+
+.shell-header {
+  padding-block: clamp(1.6rem, 3.4vw, 2.6rem) 0;
+}
+
+.shell-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.wordmark-app {
+  font-family: var(--grotesque);
+  font-size: clamp(1.35rem, 3.2vw, 1.75rem);
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  color: var(--graphite);
+  line-height: 1;
+}
+
+.shell-header nav {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(0.9rem, 2.4vw, 1.6rem);
+  font-size: 0.9375rem;
+  color: var(--graphite-soft);
+}
+
+.shell-header nav a {
+  transition: color var(--dur-quick) var(--ease);
+}
+
+.shell-header nav a:hover,
+.shell-header nav a.is-active {
+  color: var(--graphite);
+}
+
+.shell-header nav a.is-active {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1px;
+}
+
+/* -------------------------------------------------------------------- main */
+
+.shell-main {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.page {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: clamp(2.6rem, 7vw, 5rem) var(--gutter) clamp(3rem, 8vw, 6rem);
+}
+
+.page-head {
+  max-width: var(--measure);
+  margin-bottom: clamp(2rem, 5vw, 3.2rem);
+}
+
+.page-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 6.4vw, 3.9rem);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  margin-block: 0.45rem 0;
+}
+
+.page-lede {
+  margin-top: 1.1rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--graphite-soft);
+}
+
+.section {
+  margin-top: clamp(2.4rem, 6vw, 3.6rem);
+}
+
+.section-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+}
+
+.section-note {
+  color: var(--graphite-soft);
+  font-size: 0.9375rem;
+  max-width: var(--measure);
+  margin-bottom: 1.4rem;
+}
+
+/* ------------------------------------------------------------------ footer */
+
+.shell-footer {
+  margin-top: auto;
+  padding: 0 var(--gutter) clamp(1.8rem, 4vw, 2.6rem);
+}
+
+.shell-footer-inner {
+  max-width: var(--page-max);
+  margin: 0 auto;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.75rem;
+  padding-top: clamp(1.2rem, 3vw, 1.8rem);
+  font-size: 0.9375rem;
+  color: var(--graphite-soft);
+}
+
+.footer-links a {
+  transition: color var(--dur-quick) var(--ease);
+}
+
+.footer-links a:hover {
+  color: var(--graphite);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1px;
+}
+
+.footer-sep {
+  color: var(--graphite-faint);
+  user-select: none;
+}
+
+.footer-meta {
+  margin-top: 0.9rem;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+  color: var(--graphite-faint);
+  overflow-wrap: anywhere;
+}
+
+.footer-meta a:hover {
+  color: var(--graphite-soft);
+}
+
+/* ------------------------------------------------------------- primitives */
+
+.hash {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: -0.01em;
+  color: var(--graphite);
+  overflow-wrap: anywhere;
+}
+
+.hash-dim {
+  color: var(--graphite-soft);
+}
+
+a.hash-link {
+  border-bottom: 1px solid var(--rule);
+  transition: border-color var(--dur-quick) var(--ease);
+}
+
+a.hash-link:hover {
+  border-bottom-color: var(--graphite);
+}
+
+.copy-btn {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0 0 0 0.5rem;
+  cursor: pointer;
+  font-family: var(--grotesque);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--graphite-faint);
+  transition: color var(--dur-quick) var(--ease);
+}
+
+.copy-btn:hover {
+  color: var(--graphite);
+}
+
+.copy-btn[data-copied='true'] {
+  color: var(--graphite);
+}
+
+/* Code blocks -------------------------------------------------------------- */
+
+.code {
+  position: relative;
+  background: var(--cream-deep);
+  border: 1px solid var(--rule);
+  margin-block: 1.2rem;
+}
+
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--grotesque);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--graphite-soft);
+}
+
+.code pre {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  tab-size: 2;
+}
+
+.code code {
+  font-family: inherit;
+}
+
+/* A deliberately small token set — restraint applies to syntax colour too. */
+.tok-comment {
+  color: var(--graphite-faint);
+  font-style: italic;
+}
+.tok-keyword {
+  color: #7a5a2e;
+}
+.tok-string {
+  color: #4a6b33;
+}
+.tok-number {
+  color: #7a4a3a;
+}
+.tok-type {
+  color: #2f4858;
+}
+
+/* States ------------------------------------------------------------------- */
+
+.notice {
+  border: 1px solid var(--rule);
+  border-left-width: 2px;
+  padding: 1rem 1.15rem;
+  background: var(--cream-deep);
+  font-size: 0.9375rem;
+  color: var(--graphite-soft);
+  max-width: var(--measure);
+}
+
+.notice strong {
+  color: var(--graphite);
+  font-weight: 500;
+}
+
+.notice-warm {
+  border-left-color: var(--warm-light);
+}
+
+.notice-plain {
+  background: none;
+}
+
+.empty {
+  border: 1px solid var(--rule);
+  padding: clamp(1.6rem, 4vw, 2.4rem);
+  background: var(--cream-deep);
+}
+
+.empty h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.25rem;
+  margin-bottom: 0.6rem;
+  letter-spacing: -0.01em;
+}
+
+.empty p {
+  color: var(--graphite-soft);
+  font-size: 0.9375rem;
+  max-width: 54ch;
+}
+
+.empty p + p {
+  margin-top: 0.7rem;
+}
+
+.working {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.875rem;
+  color: var(--graphite-soft);
+}
+
+.working::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--graphite-soft);
+  animation: pulseLive 1.8s var(--ease) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .working::before {
+    animation: none;
+  }
+}
+
+/* Buttons ------------------------------------------------------------------ */
+
+.btn {
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--graphite);
+  background: none;
+  color: var(--graphite);
+  border-radius: 0;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.875rem;
+  transition:
+    background var(--dur-quick) var(--ease),
+    color var(--dur-quick) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--graphite);
+  color: var(--cream);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-lime {
+  border-color: var(--lime-deep);
+  background: var(--lime);
+  color: var(--graphite);
+}
+
+.btn-lime:hover:not(:disabled) {
+  background: var(--lime-deep);
+  color: var(--graphite);
+}
+
+.btn-quiet {
+  border-color: var(--rule);
+  color: var(--graphite-soft);
+}
+
+.btn-quiet:hover:not(:disabled) {
+  background: none;
+  border-color: var(--graphite);
+  color: var(--graphite);
+}
+
+/* Field ------------------------------------------------------------------- */
+
+.field {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--rule);
+  background: transparent;
+  transition: border-color var(--dur-quick) var(--ease);
+}
+
+.field:focus-within {
+  border-color: var(--graphite);
+}
+
+.field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 1rem 1.15rem;
+  font-size: 1.0625rem;
+  border-radius: 0;
+}
+
+.field input:focus {
+  outline: none;
+}
+
+.field input::placeholder {
+  color: var(--graphite-faint);
+}
+
+.select {
+  appearance: none;
+  border: 1px solid var(--rule);
+  background: transparent;
+  border-radius: 0;
+  padding: 0.55rem 2rem 0.55rem 0.8rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--graphite-soft) 50%),
+    linear-gradient(135deg, var(--graphite-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% + 1px),
+    calc(100% - 11px) calc(50% + 1px);
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  transition: border-color var(--dur-quick) var(--ease);
+}
+
+.select:hover,
+.select:focus {
+  border-color: var(--graphite);
+}
+
+/* Chain toggle ------------------------------------------------------------- */
+
+.chain-toggle {
+  display: inline-flex;
+  border: 1px solid var(--rule);
+}
+
+.chain-toggle button {
+  appearance: none;
+  background: none;
+  border: 0;
+  border-right: 1px solid var(--rule);
+  padding: 0.5rem 0.95rem;
+  font-size: 0.8125rem;
+  color: var(--graphite-soft);
+  cursor: pointer;
+  transition:
+    color var(--dur-quick) var(--ease),
+    background var(--dur-quick) var(--ease);
+}
+
+.chain-toggle button:last-child {
+  border-right: 0;
+}
+
+.chain-toggle button[aria-pressed='true'] {
+  background: var(--cream-deep);
+  color: var(--graphite);
+}
+
+.chain-toggle button:hover {
+  color: var(--graphite);
+}
+
+/* Stat rows ---------------------------------------------------------------- */
+
+/* Each .stat draws its own full border and overlaps its neighbour's by 1px
+   via negative margin. A shared gap-as-background grid line would leave a
+   solid rectangle showing through whenever the last row does not fill every
+   column — every page here has a different stat count, so that happens
+   often. This collapses cleanly regardless of how many cells the last row
+   holds. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-top: -1px;
+  margin-left: -1px;
+}
+
+.stat {
+  background: var(--cream);
+  border: 1px solid var(--rule);
+  margin-top: 1px;
+  margin-left: 1px;
+  padding: 1.15rem 1.2rem 1.25rem;
+}
+
+.stat-label {
+  font-family: var(--grotesque);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--graphite-soft);
+}
+
+.stat-value {
+  margin-top: 0.5rem;
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 3.6vw, 2.2rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value.mono-value {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.stat-sub {
+  margin-top: 0.45rem;
+  font-size: 0.75rem;
+  color: var(--graphite-faint);
+}
+
+@media (max-width: 640px) {
+  table.data {
+    font-size: 0.75rem;
+  }
+}

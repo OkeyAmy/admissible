@@ -1,0 +1,331 @@
+/* / — the dark cinematic threshold. Lime never appears here; the only accent
+   is the golden light coming through the door. */
+
+.landing {
+  background: var(--ink);
+  color: var(--cream);
+  min-height: 100%;
+}
+
+.threshold {
+  position: relative;
+  min-height: 100svh;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.threshold-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.threshold-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  /* The photograph itself fades up; nothing else moves with it. */
+  animation: fadeIn 1400ms var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .threshold-bg img {
+    animation: none;
+  }
+}
+
+/* Vignette: keeps the left third legible at any viewport without dulling the
+   slit of light. Two layers — a lateral wash and a corner darkening. */
+.threshold-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(11, 10, 8, 0.86) 0%, rgba(11, 10, 8, 0.6) 26%, rgba(11, 10, 8, 0) 46%),
+    linear-gradient(180deg, rgba(11, 10, 8, 0.55) 0%, rgba(11, 10, 8, 0) 22%, rgba(11, 10, 8, 0) 62%, rgba(11, 10, 8, 0.7) 100%),
+    radial-gradient(120% 90% at 50% 50%, rgba(11, 10, 8, 0) 40%, rgba(11, 10, 8, 0.55) 100%);
+  pointer-events: none;
+}
+
+.threshold-inner {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1.6rem, 4.2vh, 2.6rem) clamp(1.5rem, 5.6vw, 4.2rem);
+}
+
+/* Wordmark ---------------------------------------------------------------- */
+
+.wordmark-dark {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 0.9375rem;
+  letter-spacing: 0.18em;
+  color: var(--cream);
+  line-height: 1;
+  animation: fadeIn var(--dur-entrance) var(--ease) 120ms both;
+}
+
+/* Headline block ---------------------------------------------------------- */
+
+.threshold-copy {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: clamp(3.5rem, 13vh, 9rem);
+  padding-left: clamp(0rem, 6.5vw, 6.5rem);
+  max-width: min(38rem, 46vw);
+}
+
+@media (max-width: 900px) {
+  .threshold-copy {
+    max-width: 34rem;
+    padding-left: 0;
+  }
+}
+
+.threshold-headline {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 4.4vw, 3.6rem);
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  color: var(--cream);
+  text-shadow: 0 1px 40px rgba(11, 10, 8, 0.75);
+  animation: riseIn 820ms var(--ease) 220ms both;
+}
+
+.threshold-rule {
+  width: 210px;
+  max-width: 60%;
+  height: 1px;
+  margin-top: clamp(1rem, 2.2vh, 1.4rem);
+  background: rgba(250, 245, 236, 0.4);
+  transform-origin: left center;
+  animation: ruleGrow 900ms var(--ease) 520ms both;
+}
+
+.threshold-subline {
+  margin-top: clamp(1rem, 2.2vh, 1.4rem);
+  font-family: var(--serif);
+  font-size: clamp(0.875rem, 1.15vw, 1rem);
+  letter-spacing: 0.005em;
+  color: rgba(250, 245, 236, 0.68);
+  text-shadow: 0 1px 30px rgba(11, 10, 8, 0.7);
+  animation: riseIn 820ms var(--ease) 700ms both;
+}
+
+/* Enter ------------------------------------------------------------------- */
+
+.threshold-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-top: 2rem;
+}
+
+.scroll-hint {
+  font-family: var(--grotesque);
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(250, 245, 236, 0.34);
+  animation: fadeIn var(--dur-entrance) var(--ease) 1100ms both;
+}
+
+.enter-link {
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  color: var(--cream);
+  border-bottom: 1px solid transparent;
+  padding-bottom: 3px;
+  transition: border-color var(--dur-quick) var(--ease);
+  animation: fadeIn var(--dur-entrance) var(--ease) 900ms both;
+}
+
+.enter-link:hover {
+  border-bottom-color: var(--cream);
+}
+
+/* ------------------------------------------------------- below the fold */
+
+.mechanism {
+  background: var(--ink);
+  color: var(--cream);
+  padding: clamp(4rem, 12vw, 8rem) clamp(1.5rem, 5.6vw, 4.2rem) clamp(3rem, 8vw, 5rem);
+}
+
+.mechanism-inner {
+  max-width: var(--page-max);
+  margin: 0 auto;
+}
+
+.mechanism-lede {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 3vw, 2.15rem);
+  line-height: 1.28;
+  letter-spacing: -0.012em;
+  max-width: 30ch;
+  color: var(--cream);
+}
+
+.mechanism-lede em {
+  font-style: italic;
+  color: var(--warm-light);
+}
+
+.mechanism-note {
+  margin-top: 1.4rem;
+  max-width: 58ch;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--cream-dim);
+}
+
+.flow {
+  list-style: none;
+  margin-top: clamp(3rem, 7vw, 4.5rem);
+  border-top: 1px solid var(--rule-dark);
+}
+
+.flow li {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr;
+  gap: 0 1.4rem;
+  padding: clamp(1.3rem, 3vw, 1.9rem) 0;
+  border-bottom: 1px solid var(--rule-dark);
+}
+
+.flow-index {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--warm-light);
+  padding-top: 0.35rem;
+}
+
+.flow-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(1.15rem, 2.2vw, 1.5rem);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--cream);
+}
+
+.flow-body {
+  margin-top: 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.62;
+  color: var(--cream-dim);
+  max-width: 62ch;
+}
+
+.flow-meta {
+  margin-top: 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: rgba(250, 245, 236, 0.44);
+  overflow-wrap: anywhere;
+}
+
+.flow-meta span {
+  color: var(--warm-light);
+}
+
+@media (max-width: 560px) {
+  .flow li {
+    grid-template-columns: 2.2rem 1fr;
+    gap: 0 0.9rem;
+  }
+}
+
+/* Facts strip -------------------------------------------------------------- */
+
+.dark-facts {
+  margin-top: clamp(3rem, 7vw, 4.5rem);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px;
+  background: var(--rule-dark);
+  border: 1px solid var(--rule-dark);
+}
+
+.dark-fact {
+  background: var(--ink);
+  padding: 1.2rem 1.3rem 1.4rem;
+}
+
+.dark-fact dt {
+  font-family: var(--grotesque);
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(250, 245, 236, 0.42);
+}
+
+.dark-fact dd {
+  margin: 0.55rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--cream);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.dark-fact dd.big {
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* Closing ------------------------------------------------------------------ */
+
+.mechanism-close {
+  margin-top: clamp(3.5rem, 8vw, 5.5rem);
+  padding-top: clamp(1.6rem, 4vw, 2.4rem);
+  border-top: 1px solid var(--rule-dark);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.2rem;
+}
+
+.mechanism-close .enter-link {
+  animation: none;
+}
+
+.dark-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  font-size: 0.875rem;
+  color: rgba(250, 245, 236, 0.5);
+}
+
+.dark-links a {
+  transition: color var(--dur-quick) var(--ease);
+}
+
+.dark-links a:hover {
+  color: var(--cream);
+}
+
+.attrib {
+  margin-top: 2.4rem;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  line-height: 1.7;
+  color: rgba(250, 245, 236, 0.3);
+  max-width: 70ch;
+}

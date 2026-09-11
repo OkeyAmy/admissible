@@ -1,0 +1,13 @@
+packages:
+  - 'packages/*'
+  - 'worker'
+  - 'web'
+  - 'bench'
+  - 'relayer'
+
+allowBuilds:
+  esbuild: true
+
+# pnpm 11 reads build-script allowlists here, not from package.json.
+onlyBuiltDependencies:
+  - esbuild

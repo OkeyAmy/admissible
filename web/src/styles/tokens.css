@@ -1,0 +1,45 @@
+/* Design system — SPEC.md §7. Non-negotiable, shared by every surface. */
+
+:root {
+  /* Palette */
+  --ink: #0b0a08;
+  --ink-soft: #17150f;
+  --cream: #faf5ec;
+  --cream-deep: #f2eadc;
+  --graphite: #1a1814;
+  --graphite-soft: #6b6355;
+  --warm-light: #e8b87a;
+  --lime: #d6e85b;
+  --lime-deep: #c2d63f;
+  --rule: rgba(26, 24, 20, 0.14);
+  --rule-dark: rgba(250, 245, 236, 0.16);
+
+  /* Derived, used only for states — never new hues */
+  --cream-dim: rgba(250, 245, 236, 0.62);
+  --cream-faint: rgba(250, 245, 236, 0.38);
+  --graphite-faint: rgba(26, 24, 20, 0.42);
+  --warm-glow: rgba(232, 184, 122, 0.16);
+  --lime-wash: rgba(214, 232, 91, 0.18);
+
+  /* Type */
+  --serif: 'Playfair Display Variable', 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --grotesque: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Motion — slow and confident. No bounce, no spring. */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-entrance: 760ms;
+  --dur-quick: 320ms;
+
+  /* Rhythm */
+  --gutter: clamp(1.4rem, 5vw, 4.5rem);
+  --page-max: 1180px;
+  --measure: 62ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-entrance: 1ms;
+    --dur-quick: 1ms;
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@admissible/worker",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Long-running mirror worker — polls Ethereum Sepolia (chainKey 1) and Ethereum Mainnet (chainKey 3) for new EAS Attested/Revoked events via easscan and mirrors them into the Creditcoin registry through the Attestcoin Protocol.",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@admissible/sdk": "workspace:*",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

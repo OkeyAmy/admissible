@@ -1,0 +1,24 @@
+[profile.default]
+src = "contracts/src"
+test = "contracts/test"
+out = "contracts/out"
+libs = ["node_modules", "contracts/lib"]
+solc_version = "0.8.28"
+# Creditcoin CC3 is a Substrate/Frontier EVM: its block headers carry no `prevrandao`, so a
+# post-merge target makes forge's local simulation fail header validation. `london` also keeps
+# PUSH0 out of the bytecode, which Frontier chains do not universally implement.
+evm_version = "london"
+optimizer = true
+optimizer_runs = 200
+# The registry's entrypoint forwards a full Attestcoin proof bundle (9 values, three of them
+# dynamic) into the inherited ASCBase.execute; the legacy codegen runs out of stack slots doing it.
+# viaIR is the compiler's own recommended fix and keeps the entrypoint signature readable.
+via_ir = true
+remappings = [
+  "@gluwa/asc-contracts/=node_modules/@gluwa/asc-contracts/",
+  "forge-std/=contracts/lib/forge-std/src/"
+]
+
+[rpc_endpoints]
+creditcoin = "https://rpc.cc3-testnet.creditcoin.network"
+sepolia = "https://ethereum-sepolia-rpc.publicnode.com"

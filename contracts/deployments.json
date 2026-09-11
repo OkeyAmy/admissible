@@ -1,0 +1,29 @@
+{
+  "chainId": 102031,
+  "network": "creditcoin-cc3-testnet",
+  "rpc": "https://rpc.cc3-testnet.creditcoin.network",
+  "explorer": "https://creditcoin-testnet.blockscout.com",
+  "registry": "0xA972422a821F622bcC1a72d0B19242F1ae2C6047",
+  "pool": "0x947c2ECCD2A754aCbf19A30F01450766B4938Ad6",
+  "deployedAt": "2026-09-10T22:39:02.951Z",
+  "deployer": "0xA5B3d738FB24C880a2BB1Bc4Ec65475489889714",
+  "blockNumber": 5465943,
+  "transactions": {
+    "registry": "0xda62e5f110d4d4caaa129e732b484b932b5c31dd3c488eafa1cdeb2b7c5e52fc",
+    "pool": "0xe1869bb38c053355841520ad0bdc0474a268e2fcb4285822042b0d5ca4071221"
+  },
+  "gasUsed": {
+    "registry": 3202903,
+    "pool": 1271830
+  },
+  "blockProverPrecompile": "0x0000000000000000000000000000000000000FD2",
+  "easAddresses": {
+    "1": "0xC2679fBD37d54388Ce493F1DB75320D236e1815e",
+    "3": "0xA1207F3BBa224E2c9c3c6D5aF63D0eb1582Ce587"
+  },
+  "entrypoint": "submit(uint8,uint64,uint64,bytes32,bytes,(bytes32,(bytes32,bool)[]),(bytes32,bytes32[]))",
+  "abi": {
+    "registry": "contracts/abi/AttestationRegistry.json",
+    "pool": "contracts/abi/CredentialGatedPool.json"
+  }
+}
