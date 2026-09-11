@@ -1,29 +1,31 @@
 # Quickstart
 
-From a clean machine to a mirrored Ethereum attestation on Creditcoin, and then to
-verifying it without trusting us.
+From an empty machine to a mirrored Ethereum attestation on Creditcoin, and onward to
+verifying it without placing any trust in us.
 
 ## The judge's one command
 
-If you only run one thing, run this. It needs no API key, no install, and no local state.
+If you run one thing, make it this. It asks for no API key, no install, and no local
+state.
 
 ```bash
 npx admissible verify 0x<EAS_UID>
 ```
 
-It reads the mirrored record from the Creditcoin registry over the public RPC, fetches
-the same UID from `easscan.org/graphql`, and prints a field-by-field diff plus PASS/FAIL.
+It pulls the mirrored record from the Creditcoin registry across the public RPC,
+retrieves the same UID from `easscan.org/graphql`, and emits a field-by-field diff
+together with PASS/FAIL.
 
-A UID that is already mirrored, ready to paste — a real Ethereum mainnet EAS attestation
-mirrored during this project's own bench run, checked live against the registry and
-easscan while writing this document:
+Here is a UID already mirrored and ready to paste — an authentic Ethereum mainnet EAS
+attestation mirrored during this project's own bench run, verified live against the
+registry and easscan while this document was being written:
 
 ```bash
 npx admissible verify 0xf816583fdd1d59500a5abf035afd62d4b57af18d71221117cfcce47030ca2d05
 ```
 
-If you would rather not run our code at all, skip to [verify](./verify.md), which does
-the whole check with `cast` and `curl`.
+Prefer not to run our code at all? Skip to [verify](./verify.md), which performs the
+entire check with `cast` and `curl`.
 
 ## Requirements
 
@@ -34,13 +36,9 @@ the whole check with `cast` and `curl`.
 | Foundry | for the contracts only |
 | Testnet CTC | only if you want to submit mirrors yourself |
 
-Use pnpm, not npm. The workspace is defined by `pnpm-workspace.yaml` and `pnpm-lock.yaml`
-is the committed lockfile; running `npm install` would resurrect a `package-lock.json` and
-fight it.
-
-You do **not** need CTC to read the registry, to generate proofs, or to run
-`npx admissible verify`. Proof generation through the Attestcoin Proof Builder is free;
-only on-chain submission costs CTC.
+CTC is **not** required to read the registry, to generate proofs, or to execute
+`npx admissible verify`. Proof generation via the Attestcoin Proof Builder is free; only
+on-chain submission carries a CTC cost.
 
 ## Install
 
@@ -53,7 +51,8 @@ cp .env.example .env
 
 ## Configure
 
-`.env` ships with every endpoint pre-filled. Only two fields need your attention.
+`.env` arrives with each endpoint already filled in. Just two fields demand your
+attention.
 
 ```bash
 CREDITCOIN_RPC=https://rpc.cc3-testnet.creditcoin.network
@@ -73,18 +72,18 @@ PRIVATE_KEY=          # ← testnet only. Never a key holding real funds.
 REGISTRY_ADDRESS=     # ← the deployed AttestationRegistry
 ```
 
-`REGISTRY_ADDRESS` for the deployed CC3 testnet instance:
+For the deployed CC3 testnet instance, `REGISTRY_ADDRESS` is:
 
 ```
 0xA972422a821F622bcC1a72d0B19242F1ae2C6047
 ```
 
-(`CredentialGatedPool` is at `0x947c2ECCD2A754aCbf19A30F01450766B4938Ad6`.) Source of
-truth: `contracts/deployments.json`.
+(`CredentialGatedPool` lives at `0x947c2ECCD2A754aCbf19A30F01450766B4938Ad6`.) The
+authoritative source is `contracts/deployments.json`.
 
 ## Check the protocol is live
 
-Before anything else:
+Before doing anything else:
 
 ```bash
 curl https://proof-gen-api.cc3-testnet.creditcoin.network/api/v1/attested-height/3
@@ -94,12 +93,12 @@ curl https://proof-gen-api.cc3-testnet.creditcoin.network/api/v1/attested-height
 {"attestedHeight":25948260}
 ```
 
-If that returns a number, Attestcoin's readability pipeline is up and the rest of this
-page will work. `3` is Ethereum mainnet; use `1` for Sepolia.
+If a number comes back, Attestcoin's readability pipeline is up and the rest of this page
+will work. `3` is Ethereum mainnet; use `1` for Sepolia.
 
 ## Find an attestation to mirror
 
-Any EAS UID works. To pick a recent real one from Ethereum mainnet:
+Any EAS UID will do. To pick a recent real one from Ethereum mainnet:
 
 ```bash
 curl -s https://easscan.org/graphql -H 'content-type: application/json' \
@@ -210,8 +209,8 @@ pnpm -r build                 # build every workspace package
 
 ## Where to go next
 
-- [Attestcoin integration](./attestcoin-integration.md) — how the protocol is used, in
-  depth. This is the main technical document.
-- [Architecture](./architecture.md) — the system in parts.
-- [SDK reference](./sdk.md) — the full API.
+- [Attestcoin integration](./attestcoin-integration.md) — a deep account of how the
+  protocol is used. The main technical document.
+- [Architecture](./architecture.md) — the system broken into its parts.
+- [SDK reference](./sdk.md) — the complete API.
 - [Verification](./verify.md) — checking the claims without us.

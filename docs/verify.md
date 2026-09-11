@@ -1,7 +1,7 @@
 # Verification
 
-This project's thesis is that claims should be checkable. This page is how you check
-ours, with no API key, no local state, and — if you want — no Admissible code at all.
+This project rests on a premise: claims should be checkable. This page is how ours get
+checked, with no API key, no local state, and — if you like — no Admissible code at all.
 
 ## The one command
 
@@ -9,13 +9,13 @@ ours, with no API key, no local state, and — if you want — no Admissible cod
 npx admissible verify 0xf816583fdd1d59500a5abf035afd62d4b57af18d71221117cfcce47030ca2d05
 ```
 
-The field values below are real — fetched live from the deployed registry, from easscan,
-and (for `sourceBlock`, a third independent surface) from Ethereum mainnet's own RPC, all
-while writing this document. **This is not literal captured CLI stdout** — the actual
-`admissible verify` output is formatted differently and scores a few more fields than
-shown here (`uid`, `revokedAt`, plus `chainKey` and `mirroredAt` as informational rows —
-full list in [sdk.md](./sdk.md)) — but every value below is exactly what a real run
-against this UID reads on both sides, and they agree on all of them:
+The values in the table below are real — pulled live from the deployed registry, from
+easscan, and (for `sourceBlock`, a third independent surface) from Ethereum mainnet's own
+RPC, all while this document was being written. **This is not literal captured CLI
+stdout** — the actual `admissible verify` output is formatted differently and scores a few
+more fields than shown here (`uid`, `revokedAt`, plus `chainKey` and `mirroredAt` as
+informational rows — full list in [sdk.md](./sdk.md)) — but every value below is exactly
+what a real run against this UID reads on both sides, and they agree on all of them:
 
 ```
 UID          0xf816583fdd1d59500a5abf035afd62d4b57af18d71221117cfcce47030ca2d05
@@ -35,14 +35,14 @@ All fields agree — the shape of result a real PASS run reports.
 
 ### A real mismatch, found while writing this document
 
-Not staged. Checking a second mainnet UID from the same bench run —
-`0x4095ca981096b69eec61ffb67e326e9a4b7ecb43add8f9bb33f03534570252fa` — turned up a genuine
-disagreement: the registry has `revoked = false`, easscan reports `revoked = true`
-(revoked roughly 48 seconds after it was attested). Every other field matches. This is not
-a spoofing case and not a bug in the emitter check — it is the mirror doing exactly what it
-is documented to do. Mirroring an `Attested` log (action `0`) and mirroring a `Revoked`
-log (action `1`) are two separate proof submissions (§"Write path" in
-[registry](./registry.md)); this bench run only submitted the first for this UID. The
+Nothing here was staged. A second mainnet UID drawn from the same bench run —
+`0x4095ca981096b69eec61ffb67e326e9a4b7ecb43add8f9bb33f03534570252fa` — surfaced a real
+divergence: the registry holds `revoked = false`, while easscan reports `revoked = true`
+(the revocation landed roughly 48 seconds after the attestation). Every other field
+matches. This is not a spoofing case and not a bug in the emitter check — the mirror is
+doing exactly what it is documented to do. Mirroring an `Attested` log (action `0`) and
+mirroring a `Revoked` log (action `1`) are two separate proof submissions (§"Write path"
+in [registry](./registry.md)); this bench run only submitted the first for this UID. The
 registry entry is a snapshot **as of the moment it was proven**, not a live subscription —
 and `verify` catching a stale snapshot, instead of silently reporting PASS, is the tool
 working correctly. Run `npx admissible verify` on this UID yourself to see the FAIL, and
@@ -54,21 +54,21 @@ exactly this.
 A verification is only meaningful if the two sides are genuinely independent. Here they
 are:
 
-**Side one — Creditcoin.** State inside a contract on CC3 testnet, read over the public
-RPC. It got there through one path only: someone submitted an Attestcoin proof that the
-BlockProver precompile at `0x…0FD2` accepted. The contract does have a narrow owner role
+**Side one — Creditcoin.** Contract-held state on CC3 testnet, read across the public
+RPC. Only one route leads there: someone submitted an Attestcoin proof that the
+BlockProver precompile at `0x…0FD2` accepted. The contract does carry a narrow owner role
 (it can register the canonical EAS address for a *new* source chainKey), but no function,
-owner-gated or otherwise, can write, forge, or revoke a `MirroredAttestation` by hand — see
-[registry](./registry.md). Almost every field in that struct comes out of the proven
-receipt logs and is cryptographically guaranteed to exist on Ethereum. **One field is the
-exception:** `sourceTxHash` is caller-supplied display metadata, not something the
+owner-gated or otherwise, can write, forge, or revoke a `MirroredAttestation` by hand —
+see [registry](./registry.md). Almost every field in that struct is derived from the
+proven receipt logs and is cryptographically assured to exist on Ethereum. **One field is
+the exception:** `sourceTxHash` is caller-supplied display metadata, not something the
 BlockProver proof covers — see the callout below the comparison table.
 
 **Side two — easscan.org.** A public Ethereum indexer, operated by the EAS team, that has
 never heard of this project and that we cannot influence.
 
-Neither side derives from the other. easscan is used inside Admissible for UID *discovery*
-only — to find which Ethereum transaction to prove — and nothing it returns is ever an
+Neither side is derived from the other. Inside Admissible, easscan serves UID *discovery*
+only — locating which Ethereum transaction to prove — and nothing it returns is ever an
 input to on-chain state. If the two sides agree, the agreement means something.
 
 **What you are not asked to trust:** this documentation, our receipts file, our worker,
@@ -88,9 +88,9 @@ UID=0x<EAS_UID>
 cast call $REG "attestationOf(uint64,bytes32)" 3 $UID --rpc-url $RPC
 ```
 
-This returns the full `MirroredAttestation` struct: chainKey, uid, schemaUid, attester,
-recipient, sourceBlock, sourceTxHash, mirroredAt, revoked, revokedAt, exists. Field
-order and types are in [registry](./registry.md).
+The response is the complete `MirroredAttestation` struct: chainKey, uid, schemaUid,
+attester, recipient, sourceBlock, sourceTxHash, mirroredAt, revoked, revokedAt, exists.
+Field order and types are in [registry](./registry.md).
 
 ### 2. Read Ethereum, from someone who is not us
 
@@ -99,7 +99,7 @@ curl -s https://easscan.org/graphql -H 'content-type: application/json' \
   -d '{"query":"{attestation(where:{id:\"0x<EAS_UID>\"}){id txid time attester recipient schemaId revoked revocationTime}}"}'
 ```
 
-For Sepolia UIDs use `https://sepolia.easscan.org/graphql`.
+Use `https://sepolia.easscan.org/graphql` for Sepolia UIDs.
 
 ### 3. Compare
 
@@ -111,23 +111,23 @@ For Sepolia UIDs use `https://sepolia.easscan.org/graphql`.
 | `sourceTxHash` | `txid` |
 | `revoked` | `revoked` |
 
-They should match exactly. That is the entire claim of this project — with one caveat
-worth stating precisely: `attester`, `recipient`, `schemaUid` and `revoked` come out of the
-proven Ethereum receipt logs, so a mismatch there is a cryptographic impossibility unless
-something is genuinely wrong. `sourceTxHash` is different — it is metadata the submitter
-typed in, not something the BlockProver proof covers (the prover's `txBytes` is an ABI
-re-encoding, and the decoder cannot re-derive the original hash for every transaction
-type). The CLI's `verify` still scores it against easscan's `txid` and reports a mismatch
-as FAIL, so a spoofed value does not pass silently — but the guarantee behind that field is
-"caught by cross-checking a second source," not "proven on chain," and this page says so
-rather than blurring the two.
+The two should line up exactly. That is the entire claim of this project — with one caveat
+worth stating precisely: `attester`, `recipient`, `schemaUid` and `revoked` come out of
+the proven Ethereum receipt logs, so a mismatch there is a cryptographic impossibility
+unless something is genuinely wrong. `sourceTxHash` is different — it is metadata the
+submitter typed in, not something the BlockProver proof covers (the prover's `txBytes` is
+an ABI re-encoding, and the decoder cannot re-derive the original hash for every
+transaction type). The CLI's `verify` still scores it against easscan's `txid` and reports
+a mismatch as FAIL, so a spoofed value does not pass silently — but the guarantee behind
+that field is "caught by cross-checking a second source," not "proven on chain," and this
+page says so rather than blurring the two.
 
 ## Three more checks worth running
 
 ### What does the registry trust as EAS?
 
-The security of everything above rests on the registry only accepting logs from the
-canonical EAS deployment. That is public:
+Everything above is only as secure as the registry's refusal to accept logs from any
+deployment but the canonical EAS one. That posture is public:
 
 ```bash
 cast call $REG "easAddress(uint64)" 3 --rpc-url $RPC
@@ -137,7 +137,7 @@ cast call $REG "easAddress(uint64)" 1 --rpc-url $RPC
 # expect 0xC2679fBD37d54388Ce493F1DB75320D236e1815e  — canonical Sepolia EAS
 ```
 
-If those printed anything else, nothing else on this page would be worth reading.
+Had those printed anything else, the rest of this page would not be worth reading.
 
 ### Is the source transaction real on Ethereum?
 
@@ -151,7 +151,7 @@ is a plausibility check, and the reason the field is also cross-checked against 
 cast tx <SOURCE_TX_HASH> --rpc-url https://ethereum-rpc.publicnode.com
 ```
 
-Check that `to` is the canonical EAS address and that the transaction predates anything
+Confirm that `to` is the canonical EAS address and that the transaction predates anything
 we did.
 
 ### Prove one yourself
@@ -180,18 +180,18 @@ failures**. A receipts file containing only successes is less credible, not more
  "timestamp":"2026-09-13T…"}
 ```
 
-Two things to know before drawing conclusions from it:
+Keep two things in mind before drawing conclusions from it:
 
 1. **Rows are not transactions.** Proof generation is free; only submission costs CTC.
    `proofLatencyMs` and `submitLatencyMs` are separate fields because they have different
    cost profiles and different failure modes.
-2. **Attestations are not submissions.** `ASCBase` dedupes per
+2. **Attestations are not submissions.** `ASCBase` dedupes on
    `(chainKey, blockHeight, txIndex)`, so one `multiAttest` transaction is one `execute`
    call carrying many attestations. `queryId` and `batchIndex` are recorded so both counts
    are independently derivable. Rows sharing a `queryId` came from one Creditcoin
    transaction.
 
-Sanity-check the row-level headline numbers yourself:
+Verify the row-level headline numbers yourself:
 
 ```bash
 # attestations recorded as mirrored (one row per attestation)
@@ -208,7 +208,7 @@ grep -c '"status":"failed"' receipts/mirrors.jsonl
 grep '"status":"failed"' receipts/mirrors.jsonl | grep -o '"queryId":"[^"]*"' | sort -u | wc -l
 ```
 
-**Cost, gas and latency are per-submission fields, repeated on every row that shares a
+**Cost, gas and latency are per-submission values, repeated on every row that shares a
 `queryId`.** Summing `ctcCost` (or `gasUsed`, or a latency field) across raw rows
 over-counts any grouped `multiAttest` submission by however many attestations it wrote.
 Deduplicate by `queryId` first:
@@ -293,7 +293,7 @@ transactions written by third parties. Re-run it against the live prover:
 python3 prebuild-evidence/probe.py
 ```
 
-Or pull a single proof by hand:
+Or fetch a single proof by hand:
 
 ```bash
 curl -s https://proof-gen-api.cc3-testnet.creditcoin.network/api/v1/proof-by-tx/3/\

@@ -1,8 +1,8 @@
 # Registry reference
 
-`AttestationRegistry` is the durable artifact of this project. It is an Attestcoin Smart
-Contract that stores Ethereum attestations proven onto Creditcoin, and it is the surface
-every other contract reads.
+`AttestationRegistry` is the durable artifact of this project. An Attestcoin Smart
+Contract that stores Ethereum attestations proven onto Creditcoin, it forms the surface
+every other contract reads from.
 
 ## Deployment
 
@@ -18,7 +18,7 @@ every other contract reads.
 | Registry deploy tx | `0xda62e5f110d4d4caaa129e732b484b932b5c31dd3c488eafa1cdeb2b7c5e52fc` |
 | Deployed at | block `5465943`, 2026-09-10 |
 
-Machine-readable source of truth: `contracts/deployments.json`. ABIs are committed at
+The machine-readable source of truth lives at `contracts/deployments.json`. ABIs are committed at
 `contracts/abi/`.
 
 **The mirroring path has no owner gate.** `submit` (and the `execute` it calls
@@ -26,7 +26,7 @@ internally) is `external` and permissionless — anyone can mirror an attestatio
 including you, without asking us. Nothing about *writing an attestation record* requires
 our involvement.
 
-The contract does have a narrow owner role, unrelated to mirroring: `owner` can call
+The contract does carry a narrow owner role, unrelated to mirroring: `owner` can call
 `setEasAddress(chainKey, address)` to register the canonical EAS address for a *new*
 source chainKey (chainKeys 1 and 3 are pre-seeded at deployment and do not need this),
 and `transferOwnership(address)`. The owner cannot write, forge, or revoke a
@@ -52,8 +52,8 @@ struct MirroredAttestation {
 ```
 
 `sourceBlock` and `sourceTxHash` are stored so any entry can be traced back to Ethereum
-and checked against a source we do not control. That is what makes
-[verification](./verify.md) possible.
+and checked against a source we do not control. That is what enables
+[verification](./verify.md).
 
 ### Why `(chainKey, uid)` and not `uid`
 
@@ -71,8 +71,8 @@ takes `chainKey` first.
 function isValid(uint64 chainKey, bytes32 uid) external view returns (bool);
 ```
 
-True only if the attestation has been mirrored **and** has not been revoked. This is the
-function most consuming contracts call.
+Returns true only if the attestation has been mirrored **and** has not been revoked. This is
+the function most consuming contracts call.
 
 ### `isValidFrom`
 
@@ -94,7 +94,7 @@ function attestationOf(uint64 chainKey, bytes32 uid)
     external view returns (MirroredAttestation memory);
 ```
 
-The full record. `exists == false` means never mirrored — check that before trusting any
+Returns the full record. `exists == false` means never mirrored — check that before trusting any
 other field, since an unmirrored UID returns a zeroed struct.
 
 ### `easAddress`
@@ -111,7 +111,7 @@ public precisely so you can audit what the registry trusts:
 | 1 | `0xC2679fBD37d54388Ce493F1DB75320D236e1815e` |
 | 3 | `0xA1207F3BBa224E2c9c3c6D5aF63D0eb1582Ce587` |
 
-Every `Attested` and `Revoked` log is checked against this before it is stored. Without
+Every `Attested` and `Revoked` log is checked against this before storage. Without
 that check anyone could deploy a fake EAS clone, emit a byte-identical event, obtain a
 perfectly valid Attestcoin proof for it, and write whatever they liked into the registry.
 It is the security core of the design.
@@ -123,7 +123,7 @@ function totalMirrored() external view returns (uint256);
 function totalRevoked()  external view returns (uint256);
 ```
 
-Counters across both chainkeys, for the stats surface.
+Counters spanning both chainkeys, for the stats surface.
 
 ## Events
 
@@ -193,7 +193,7 @@ Action discriminator:
 | `1` | Revoke — decode `Revoked` logs |
 
 `merkleProof` and `continuityProof` are passed exactly as the Proof Builder returns them,
-which is why they are structs here rather than the flattened argument list `ASCBase` uses.
+which is why they appear as structs here rather than the flattened argument list `ASCBase` uses.
 
 `submit` is `external` and permissionless — no owner, no allowlist. It records `chainKey`,
 `blockHeight` and `sourceTxHash`, then calls the inherited `ASCBase.execute(...)`, which
@@ -206,7 +206,7 @@ because the chainKey context would be missing. This is covered by
 `test_RevertWhen_ExecuteIsCalledDirectly`. Permissionlessness is unaffected — `submit` is
 just as open as `execute` was.
 
-The registry never takes anyone's word for anything. The only path to writing state is a
+The registry never takes anyone's word for anything. The sole path to writing state is a
 proof that the BlockProver precompile at `0x…0FD2` accepts. See
 [the integration doc](./attestcoin-integration.md) for the full pipeline.
 
@@ -274,5 +274,5 @@ continuity-root counts measured in the pre-build probe (12–94 roots across 11 
 mainnet transactions), a verification costs roughly **3.2 – 5.0 × 10⁻⁵ CTC**. The
 documented ceiling for a maximum decode is `0.0375` CTC.
 
-Reads are free. Measured on-chain submission costs are in the evidence table in the
+Reads are free. Measured on-chain submission costs appear in the evidence table in the
 repository README.

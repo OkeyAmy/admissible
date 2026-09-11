@@ -1,34 +1,33 @@
 # How Admissible uses the Attestcoin Protocol
 
-This is the technical document required by the BUIDL CTC 2026 Fall submission rules
-("technical documentation detailing your setup and explaining how the project uses
-the Attestcoin Protocol"). It describes the setup, the integration surface, the
-design decisions, the three protocol gotchas we handle explicitly, and the measured
+This document is the technical write-up mandated by the BUIDL CTC 2026 Fall submission
+rules ("technical documentation detailing your setup and explaining how the project uses
+the Attestcoin Protocol"). It covers the setup, the integration surface, the design
+decisions behind them, the three protocol gotchas we handle explicitly, and the measured
 numbers.
 
-Every network fact in this document was verified live against CC3 testnet and the
-Attestcoin prover service on **2026-09-10**.
+Every network fact stated here was verified live against CC3 testnet and the Attestcoin
+prover service on **2026-09-10**.
 
 ---
 
 ## 0. Summary in one paragraph
 
 Admissible is an Attestcoin Smart Contract (ASC) that reads the Ethereum Attestation
-Service. A user pastes an EAS attestation UID. Admissible resolves it to the Ethereum
-transaction that created it, waits for Attestcoin's attestors to attest that block onto
-Creditcoin, asks the Proof Builder for a Merkle inclusion proof plus a continuity proof,
-and submits both to `AttestationRegistry.submit(...)` on Creditcoin, which calls the
-inherited `ASCBase.execute(...)`. `ASCBase` hands
-the proof to the **BlockProver precompile at `0x…0FD2`**, which verifies it synchronously
-at native speed inside the same transaction. Admissible then decodes the proven
-transaction's receipt logs and its raw calldata, and writes one registry entry per
-attestation. From that point on, any Creditcoin contract can call
-`isValid(chainKey, uid)` and get a boolean backed by an Ethereum-mainnet proof, with no
-oracle, no bridge, and no re-signing.
+Service. A user pastes an EAS attestation UID. From that UID Admissible resolves the
+Ethereum transaction that created it, waits for Attestcoin's attestors to witness that
+block onto Creditcoin, requests a Merkle inclusion proof plus a continuity proof from the
+Proof Builder, then hands both to `AttestationRegistry.submit(...)` on Creditcoin, which
+in turn invokes the inherited `ASCBase.execute(...)`. `ASCBase` passes the proof to the
+**BlockProver precompile at `0x…0FD2`**, which checks it synchronously at native speed
+inside the same transaction. Admissible then decodes the proven transaction's receipt logs
+and its raw calldata, and writes one registry entry per attestation. From that point
+onward any Creditcoin contract can call `isValid(chainKey, uid)` and receive a boolean
+backed by an Ethereum-mainnet proof — no oracle, no bridge, no re-signing.
 
-The part that is not in the tutorials: **the Ethereum transaction being proven was sent
-to a contract we do not own and did not deploy** — the canonical EAS deployment — by a
-stranger who has never heard of Creditcoin.
+Here is the part the tutorials skip: **the Ethereum transaction under proof was sent to a
+contract we neither own nor deployed** — the canonical EAS deployment — by a stranger who
+has never heard of Creditcoin.
 
 ---
 
@@ -47,8 +46,9 @@ stranger who has never heard of Creditcoin.
 | Explorer | `https://creditcoin-testnet.blockscout.com` (account/contract pages: `/address/{addr}`; transactions: `/tx/{hash}`) |
 | ASC dashboard | `https://dashboard.cc3-testnet.creditcoin.network/` |
 
-`https://prover.cc3-testnet.creditcoin.network` resolves to the same Proof Builder
-service. The docs and the SDK examples disagree on which hostname to use; both work.
+`https://prover.cc3-testnet.creditcoin.network` points at the same Proof Builder
+service. The docs and the SDK examples cannot agree on which hostname to use, but both
+work regardless.
 
 ### 1.2 Pinned dependencies
 
@@ -60,13 +60,13 @@ service. The docs and the SDK examples disagree on which hostname to use; both w
 
 Solidity `^0.8.28`, Foundry 1.7.1, Node 22, pnpm 11 workspaces.
 
-`.npmrc` sets `node-linker=hoisted` deliberately. `foundry.toml` remaps
+`.npmrc` sets `node-linker=hoisted` on purpose. `foundry.toml` remaps
 `@gluwa/asc-contracts/=node_modules/@gluwa/asc-contracts/`, so a flat, npm-like
-`node_modules` layout is what keeps Foundry resolving the organizer's contracts unchanged.
-It looks like an odd setting otherwise; do not remove it.
+`node_modules` layout is precisely what keeps Foundry resolving the organizer's contracts
+unchanged. Out of context the setting can look odd; leave it in place.
 
-Two `foundry.toml` compiler settings are also worth explaining rather than leaving as
-unexplained flags:
+Two more `foundry.toml` compiler settings are worth explaining rather than sitting as
+mysterious flags:
 
 - **`via_ir = true`.** The registry's `submit` entrypoint forwards a full Attestcoin proof
   bundle — nine arguments, three of them dynamic — into the inherited `ASCBase.execute`.
@@ -79,7 +79,7 @@ unexplained flags:
 
 ### 1.3 Source chains
 
-Admissible uses **both** chainkeys that CC3 testnet attests, and binds each to the
+Admissible uses **both** chainkeys that CC3 testnet attests, binding each one to the
 canonical EAS deployment on that chain:
 
 | chainKey | Chain | Canonical EAS contract | Role in this project |
@@ -93,8 +93,8 @@ Sepolia enforces a **32-block reorg-protection window** — the Proof Builder re
 `{"code":"BlockNotOnSourceChain"}` for anything newer, which is a *retryable* condition,
 not a failure.
 
-Using chainKey 3 at all is a deliberate choice. Proving Ethereum **mainnet** is what
-makes the demo attestation something we could not have manufactured.
+Including chainKey 3 is itself a deliberate choice. Proving Ethereum **mainnet** is what
+guarantees the demo attestation is something we could not have manufactured.
 
 ### 1.4 One-command liveness check
 
@@ -103,7 +103,7 @@ curl https://proof-gen-api.cc3-testnet.creditcoin.network/api/v1/attested-height
 # -> {"attestedHeight":25948260}
 ```
 
-If that returns a number, the whole readability pipeline is up.
+If a number comes back, the whole readability pipeline is up.
 
 ---
 
@@ -150,7 +150,7 @@ If that returns a number, the whole readability pipeline is up.
   Any Creditcoin contract:  IAdmissibleRegistry(reg).isValid(3, uid)
 ```
 
-The revocation path is the identical pipeline with `action = 1`, matching on the
+The revocation path runs the identical pipeline with `action = 1`, only it matches on the
 `Revoked` topic instead, flipping `revoked = true` and setting `revokedAt`.
 
 ---
@@ -159,10 +159,10 @@ The revocation path is the identical pipeline with `action = 1`, matching on the
 
 ### 3.1 What `ASCBase` actually enforces
 
-We read `@gluwa/asc-contracts@0.2.1`'s `contracts/readability/ASCBase.sol` in full
-(113 lines) before designing anything, because the entire project depends on one
-question: *does the framework let you prove a transaction sent to a contract you do
-not own?*
+Before designing anything we read `@gluwa/asc-contracts@0.2.1`'s
+`contracts/readability/ASCBase.sol` in full (113 lines), because the whole project rests
+on one question: *does the framework allow you to prove a transaction sent to a contract
+you do not own?*
 
 ```solidity
 abstract contract ASCBase {
@@ -185,21 +185,22 @@ abstract contract ASCBase {
 }
 ```
 
-The answer is yes, and the reason is worth stating precisely:
+The answer is yes, and it is worth stating the reason with care:
 
 **`execute` is `external` and permissionless. There is no owner, no allowlist, no
 registered source contract, and no check anywhere in the base class on what address the
-proven transaction was sent to.** It verifies the proof, dedupes, and dispatches.
+proven transaction was sent to.** Its only jobs are verifying the proof, deduping, and
+dispatching.
 
-This is the load-bearing observation of the whole design. It is easy to read the
-official `loan` example and conclude the framework requires you to register a source
-contract you control — the example contains `registerSourceLoanContract` and a
-`ASCLoanManagerSourceBinding` test. **That is application-level logic the example
-adds, not a base-class constraint.** Admissible uses the same *pattern* — a mapping from
-chainKey to an expected source address, asserted in our own handler — but points it at
-the canonical EAS deployment instead of at a contract we deployed that morning.
+That observation is the load-bearing element of the entire design. It would be easy to
+read the official `loan` example and walk away thinking the framework demands registration
+of a source contract you own — the example contains `registerSourceLoanContract` and an
+`ASCLoanManagerSourceBinding` test. **That is application-level logic the example adds,
+not a base-class constraint.** Admissible adopts the same *pattern* — a mapping from
+chainKey to an expected source address, asserted inside our own handler — but aims it at
+the canonical EAS deployment rather than at a contract we deployed that morning.
 
-Two consequences we lean on:
+Two consequences we rely on:
 
 1. **Anyone can submit a mirror.** The Admissible worker holds no privileged role. A
    judge can submit a mirror themselves from their own key, against our deployed
@@ -211,7 +212,7 @@ Two consequences we lean on:
 ### 3.2 What Admissible implements
 
 `AttestationRegistry` extends `ASCBase` and implements the single required hook. The
-shape is taken from `ASCMinter.sol` and `ASCLoanManager.sol` in the organizer's examples
+shape comes from `ASCMinter.sol` and `ASCLoanManager.sol` in the organizer's examples
 repo:
 
 ```solidity
@@ -240,21 +241,23 @@ contract AttestationRegistry is ASCBase, IAdmissibleRegistry {
 }
 ```
 
-The `action` dispatch is the same enum pattern the examples use. Admissible uses it to
-carry two genuinely different semantics — a fact becoming true, and a fact ceasing to
-be true — over one proof pipeline.
+The `action` dispatch reuses the same enum pattern the examples employ. Admissible leans
+on it to carry two genuinely different semantics — a fact becoming true, and a fact
+ceasing to be true — over a single proof pipeline.
 
 #### Why there is a `submit` wrapper around `execute`
 
-This is the single most important design decision in the contract, and it starts from a
+This is the single most important design decision in the contract, and it springs from a
 constraint, not a preference.
 
 `ASCBase._processAndEmitEvent` receives `(action, queryId, encodedTransaction)` — and
-**not `chainKey`**. But the registry needs `chainKey` for the security check that matters
-most: selecting which canonical EAS address to require the log emitter to equal (§5.2).
+**not `chainKey`**. Yet the registry needs `chainKey` for the security check that matters
+most: choosing which canonical EAS address the log emitter must be required to equal
+(§5.2).
 
-The obvious fix — override `execute` to accept and forward `chainKey` — is not available.
-Read `ASCBase.execute`'s declaration verbatim from `@gluwa/asc-contracts@0.2.1`:
+The obvious fix — overriding `execute` to accept and forward `chainKey` — is not
+available. Read `ASCBase.execute`'s declaration verbatim from
+`@gluwa/asc-contracts@0.2.1`:
 
 ```solidity
 function execute(
@@ -266,8 +269,8 @@ function execute(
 ```
 
 **It is `external`, and it is not `virtual`.** Solidity will not let a derived contract
-override a non-`virtual` function — full stop. There is no override path here, at any
-skill level.
+override a non-`virtual` function — full stop. No override path exists here, at any skill
+level.
 
 The solution is a thin wrapper that records what `execute` will not carry forward, then
 **self-calls the inherited `execute`** to do the actual work:
@@ -289,16 +292,17 @@ function submit(
 }
 ```
 
-It carries the chainKey context across the `ASCBase` call boundary in a private storage
+It ferries the chainKey context across the `ASCBase` call boundary in a private storage
 slot (`_pendingChainKey`, alongside `_pendingBlockHeight` and `_pendingSourceTxHash`),
 which `_processAndEmitEvent` reads back and `submit` zeroes afterward — ordinary storage,
-not EIP-1153 transient storage, since `evm_version = "london"` (§1.2) rules that out. This
-keeps the design honest in two ways:
+not EIP-1153 transient storage, since `evm_version = "london"` (§1.2) rules that out.
+This keeps the design honest in two ways:
 
 1. **Proof verification, `queryId` derivation, and the `processedQueries` dedupe map are
-   untouched — they remain entirely `ASCBase`'s.** `submit` does not re-implement or
-   shadow any of the base class's security logic; it only carries context the base class's
-   signature has no room for. The self-call runs the *real* `execute`, not a copy of it.
+   untouched — they remain entirely `ASCBase`'s.** `submit` neither re-implements nor
+   shadows any of the base class's security logic; it merely carries context the base
+   class's signature leaves no room for. The self-call runs the *real* `execute`, not a
+   copy of it.
 2. **Calling `execute` directly reverts** with `"Admissible: call submit(), not
    execute()"`, covered by `test_RevertWhen_ExecuteIsCalledDirectly`, and this check fires
    **before any state is written** — a proof submitted with no chainKey context is
@@ -362,9 +366,9 @@ require(reg.isValidFrom(3, uid, COINBASE_VERIFICATIONS_ATTESTER, KYC_SCHEMA),
         "no valid Ethereum credential");
 ```
 
-That is the whole integration cost for a downstream Creditcoin dApp. The Attestcoin
-plumbing — proof builder, precompile, decoder, replay protection — is behind the
-registry, paid for once.
+There is the whole integration cost for a downstream Creditcoin dApp. All of the
+Attestcoin plumbing — proof builder, precompile, decoder, replay protection — sits behind
+the registry, paid for once.
 
 ---
 
@@ -384,10 +388,10 @@ The Attestcoin readability documentation is explicit about how to build an ASC:
 That guidance is correct. A bespoke event on a contract you control is unambiguous,
 cheap to decode, and impossible to spoof by accident.
 
-It also has a consequence: **an ASC built that way can only read transactions that were
-created for Attestcoin.** You deploy a source contract on Ethereum, you emit your own
-event, and then you have to get a user to go and do something new on Ethereum to
-generate it. The cross-chain fact you prove is a fact you manufactured.
+It also carries a consequence: **an ASC built that way can only read transactions that
+were created for Attestcoin.** You deploy a source contract on Ethereum, you emit your own
+event, and then you have to get a user to go and do something new on Ethereum to generate
+it. The cross-chain fact you prove is a fact you manufactured.
 
 ### 4.2 What Admissible does instead
 
@@ -427,9 +431,9 @@ and branch:
 | `0x46926267` | `revoke(...)` | |
 | `0x4cb7e9e5` | `multiRevoke(...)` | |
 
-And `to` gives us the destination address of the original Ethereum transaction, which we
-can compare against the canonical EAS deployment as a second, independent check on top
-of the per-log emitter assertion.
+Separately, `to` yields the original Ethereum transaction's destination address, which we
+can compare against the canonical EAS deployment as a second, independent check on top of
+the per-log emitter assertion.
 
 Confirmed against real proven `txBytes` from three Ethereum **mainnet** EAS transactions
 on 2026-09-10: the bytes contain the EAS mainnet address `0xa1207f…ce587`, the
@@ -455,7 +459,7 @@ body, not by topic filtering.
 ### 4.4 Two layers, both shipped, honestly labelled
 
 Log decoding and calldata decoding are separate capabilities with different risk
-profiles, and this document distinguishes them rather than blurring them:
+profiles, and this document keeps them distinct rather than blurring them:
 
 - **Layer 1 — `Attested` / `Revoked` log decoding.** Yields
   `(uid, recipient, attester, schemaUID)` — enough for existence, issuer, subject and
@@ -483,7 +487,7 @@ function decodeAttestCalldata(bytes memory txData)
     internal pure returns (AttestationPayload[] memory payloads, bool ok);
 ```
 
-This pins down both `attest`'s flat struct and `multiAttest`'s
+This locks down both `attest`'s flat struct and `multiAttest`'s
 `AttestationRequest[] → AttestationRequestData[]` nesting — reproduced from the same four
 EAS selectors (`0xf17325e7`, `0x44adc90e`, `0x46926267`, `0x4cb7e9e5`) that `cast sig`
 verified against the live chain.

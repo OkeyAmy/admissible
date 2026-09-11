@@ -1,11 +1,12 @@
 # SDK reference
 
-`@admissible/sdk` — mirror an Ethereum attestation onto Creditcoin, read it back, and
-verify it against an independent source. A thin layer over `@gluwa/usc-sdk@0.18.0` and
+`@admissible/sdk` — move an Ethereum attestation onto Creditcoin, pull it back, and
+cross-check it against an external source. A slim wrapper over `@gluwa/usc-sdk@0.18.0` and
 `ethers` v6.
 
-The SDK is a **functional API**. There is no client class to construct; every function
-takes its configuration as an optional last argument and falls back to public defaults.
+The SDK follows a **functional API** design. No client class needs constructing; each
+function accepts its options as an optional trailing parameter and defaults to the public
+endpoints.
 
 ## Install
 
@@ -24,11 +25,11 @@ npx admissible verify 0x<EAS_UID>
 
 ## Configuration
 
-There is no configuration step. Every endpoint defaults to the public ones, so read
-operations work with no `.env`, no API key and no local state — that property is what
-makes `verify` the judge's command.
+Configuration is unnecessary. All endpoints resolve to public ones, so read calls run
+with no `.env`, no API key and no local state — this is precisely why `verify` works as
+the judge's command.
 
-Options are per-call overrides:
+Overrides are passed on a per-call basis:
 
 | Option | Used by | Default |
 |---|---|---|
@@ -39,8 +40,8 @@ Options are per-call overrides:
 | `sourceRpc` | `verify`, `mirror*` | the public Ethereum node for that chainKey |
 | `signer` | `mirror*` only | an `ethers` Signer, falling back to `PRIVATE_KEY` in env |
 
-Only `mirror*` submits a transaction and spends CTC. `resolve`, `verify`, `isValid` and
-the `eas` helpers are reads.
+Only the `mirror*` functions broadcast a transaction and consume CTC. Everything else —
+`resolve`, `verify`, `isValid`, and the `eas` helpers — is read-only.
 
 ## Types
 
@@ -80,13 +81,13 @@ export interface MirrorProgress {
 }
 ```
 
-`MirroredAttestation` mirrors the on-chain struct field for field. Everything is keyed on
-`(chainKey, uid)`, never `uid` alone — mainnet and Sepolia are different EAS deployments
-with independent UID spaces.
+`MirroredAttestation` maps one-to-one onto the on-chain struct. All entries are keyed by
+`(chainKey, uid)`, not `uid` by itself — mainnet and Sepolia host distinct EAS deployments
+that own separate UID spaces.
 
 ## `mirror`
 
-Proves one Ethereum attestation onto Creditcoin.
+Proves a single Ethereum attestation and records it on Creditcoin.
 
 ```ts
 mirror(uid: string, chainKey: ChainKey, opts?: MirrorOptions): Promise<MirrorResult>
@@ -153,27 +154,27 @@ const result = await mirror('0x<EAS_UID>', 3, {
 });
 ```
 
-`MirrorResult` is shaped to be written straight to `receipts/mirrors.jsonl` — one line per
-attempt, `status: 'failed'` included. Note that it **never throws for an expected
-failure**; it returns `status: 'failed'` with `error` set, so a bench run does not abort
-partway.
+`MirrorResult` is designed to append directly to `receipts/mirrors.jsonl` — a line per
+attempt, failures with `status: 'failed'` included. It **never throws on an anticipated
+failure**; instead it comes back with `status: 'failed'` and the `error` populated, so a
+bench run keeps going instead of dying partway.
 
-Behaviour worth knowing:
+Things worth knowing:
 
-- **`attestationWaitMs` can dominate.** Attestcoin's mainnet lag was measured at 42 blocks
-  (~8 minutes); Sepolia enforces a 32-block reorg-protection window. The SDK waits on
-  `ProofBuilder.waitUntilHeightAttested`, not the ChainInfo equivalent, which the SDK's own
-  docs mark as a legacy implementation — the Proof Builder keeps its own ingestion cache
-  that lags on-chain attestation, so the on-chain height can report "attested" while the
-  prover still returns nothing.
+- **`attestationWaitMs` can be the biggest factor.** Attestcoin's mainnet lag measured 42
+  blocks (~8 minutes); Sepolia enforces a 32-block reorg-protection window. The SDK waits
+  on `ProofBuilder.waitUntilHeightAttested`, not the ChainInfo equivalent, which the SDK's
+  own docs mark as a legacy implementation — the Proof Builder keeps its own ingestion
+  cache behind on-chain attestation, so the on-chain height can report "attested" while
+  the prover still returns nothing.
 - **`BlockNotOnSourceChain` is retried, not raised.** It means *too recent*, not *wrong*.
-- **`attestationsWritten` is often greater than 1.** If the source transaction was a
+- **`attestationsWritten` frequently exceeds 1.** If the source transaction was a
   `multiAttest` — where most real mainnet EAS volume is — every attestation in it is
   written, because `ASCBase` dedupes per transaction, not per UID.
 - **`status: 'already-mirrored'`** means the query was already processed. Nothing is
   resubmitted and no CTC is spent.
-- The three latency fields are kept separate on purpose: proof generation is free, waiting
-  is free, and only submission costs CTC.
+- The three latency fields stay deliberately split: proof generation is free, waiting
+  costs nothing, and only submission costs CTC.
 
 ## `mirrorRevocation`, `mirrorTransaction`, `mirrorBatch`
 
@@ -183,18 +184,18 @@ mirrorTransaction(txHash: string, chainKey: ChainKey, opts?: MirrorOptions): Pro
 mirrorBatch(txHashes: string[], chainKey: ChainKey, opts?: MirrorBatchOptions): Promise<MirrorBatchResult>
 ```
 
-`mirrorRevocation` is `mirror` with `action = 1`, proving the `Revoked` event and flipping
-the registry entry.
+`mirrorRevocation` behaves as `mirror` with `action = 1`: it proves the `Revoked` event
+and flips the registry entry.
 
-`mirrorTransaction` skips UID resolution and mirrors every attestation in a known
+`mirrorTransaction` bypasses UID resolution and mirrors every attestation in a known
 transaction — the efficient path when you already know the transaction hash.
 
-`mirrorBatch` submits several transactions' proofs together, within the protocol's two
+`mirrorBatch` sends several transactions' proofs together, within the protocol's two
 hard limits: **at most 10 proofs per submission**, all **within a 1000-block range**.
 
 ## `mirrorSchema`
 
-Mirrors an entire EAS schema's recent attestations, grouped into batched submissions.
+Mirrors recent attestations for an entire EAS schema, folded into batched submissions.
 
 ```ts
 mirrorSchema(
@@ -244,23 +245,25 @@ const r = await mirrorSchema('0x<SCHEMA_UID>', 1, {
 console.log(`${r.attestations} attestations in ${r.transactions} transactions`);
 ```
 
-`skipExisting` defaults to true, which makes the run **resumable** — it checks whether each
-source transaction's query has already been processed and skips it, so re-running after an
-interruption does not resubmit or waste CTC.
+`skipExisting` defaults to true, which gives the run **resumable** behaviour — it checks
+whether each source transaction's query was already processed and skips it, so re-running
+after an interruption does not resubmit or waste CTC.
 
-`attestations` and `transactions` are deliberately separate, and `transactions` is usually
-much the smaller — one `multiAttest` transaction is a single query carrying many
-attestations. `mirrorSchema` groups by source transaction *first*, because that grouping is
-what makes batching efficient. Report the pair as *"N attestations in M on-chain
-submissions"* rather than conflating them.
+`attestations` and `transactions` are intentionally kept apart, and `transactions`
+normally comes out far smaller — one `multiAttest` transaction is a single query carrying
+many attestations. `mirrorSchema` groups by source transaction *first*, because that
+grouping is what makes batching efficient. Report the pair as *"N attestations in M
+on-chain submissions"* rather than conflating them.
 
-One protocol subtlety, verified live: the BlockProver precompile accepts a shared
-continuity proof only through its **batch** verification path. With a shared proof spanning
-blocks 25925431–25925820, `verifySingle` returns true at the lower endpoint and reverts
-with "Merkle root mismatch" at the higher one, while `verifyBatch` returns true for both.
-A shared proof therefore cannot be split across separate `execute()` calls.
+There is one protocol nuance, confirmed on the live network: the BlockProver precompile
+accepts a shared continuity proof only through its **batch** verification path. With a
+shared proof spanning blocks 25925431–25925820, `verifySingle` returns true at the lower
+endpoint and reverts with "Merkle root mismatch" at the higher one, while `verifyBatch`
+returns true for both. Consequently a shared proof cannot be split across separate
+`execute()` calls.
 
-The `/batch` page in the web app is this function with `onBatchProgress` rendered.
+The `/batch` page in the web app is exactly this function with `onBatchProgress` wired up
+to the UI.
 
 ## Reading the registry
 
@@ -275,8 +278,8 @@ filterUnmirrored(...): Promise<...>
 emptyRecord(chainKey: ChainKey, uid: string): MirroredAttestation
 ```
 
-Note the argument order: these take **`chainKey` first**, unlike `mirror` and `verify`
-which take the UID first.
+Mind the argument order: these expect **`chainKey` first**, in contrast to `mirror` and
+`verify`, which lead with the UID.
 
 ```ts
 import { resolve, isValid } from '@admissible/sdk';
@@ -287,11 +290,12 @@ if (a.exists && !a.revoked) {
 }
 ```
 
-`resolve` always returns a record — check `exists` before trusting any other field, since
-an unmirrored UID returns a zeroed struct. `resolveOrNull` returns `null` instead.
+`resolve` always hands back a record — inspect `exists` before putting stock in any other
+field, because an unmirrored UID comes back as a zeroed struct. `resolveOrNull` returns
+`null` in that case.
 
-`filterUnmirrored` and `isQueryProcessed` are what make the worker and bench idempotent
-across restarts.
+`filterUnmirrored` and `isQueryProcessed` are the pair that keep the worker and bench
+idempotent across restarts.
 
 ## `verify`
 
@@ -334,7 +338,8 @@ for (const row of r.rows) {
 console.log(r.outcome);
 ```
 
-`chainKey` is optional — omitted, it is inferred by looking the UID up on both chains.
+`chainKey` is optional — when left out it is inferred by looking the UID up on both
+chains.
 
 The two sides are genuinely independent: one is Creditcoin state written through an
 Attestcoin proof, the other is an Ethereum indexer we have no control over. See
@@ -345,7 +350,7 @@ Admissible code at all.
 
 ## `eas`
 
-easscan GraphQL access, for discovery.
+GraphQL access to easscan, aimed at discovery.
 
 ```ts
 resolveUid(uid: string, chainKey: ChainKey, opts?: EasOptions): Promise<ResolvedUid | null>
@@ -354,11 +359,12 @@ parseUid(input: string): string   // accepts a bare UID or an easscan.org URL
 easscanLink(uid: string, chainKey: ChainKey): string
 ```
 
-Endpoints: `https://easscan.org/graphql` (mainnet) and
-`https://sepolia.easscan.org/graphql` (Sepolia). Both live and unauthenticated.
+Endpoints for these are `https://easscan.org/graphql` (mainnet) and
+`https://sepolia.easscan.org/graphql` (Sepolia). Both are live and require no
+authentication.
 
-easscan is used for **discovery and cross-checking only**. Nothing it returns is ever an
-input to on-chain state — that comes exclusively from the Attestcoin proof.
+easscan exists here for **discovery and cross-checking alone**. Nothing it returns ever
+feeds on-chain state — that input comes only from the Attestcoin proof.
 
 ## Attestcoin helpers
 
@@ -367,7 +373,7 @@ attestedHeight(chainKey: ChainKey, opts?): Promise<number>          // prover se
 onchainAttestedHeight(chainKey: ChainKey, opts?): Promise<number>   // ChainInfo precompile 0x…0fd3
 ```
 
-Both are exposed because they can disagree: the prover's ingestion cache lags on-chain
+Both are surfaced because the two can diverge: the prover's ingestion cache lags on-chain
 attestation. `mirror` waits on the prover's view, which is the correct barrier.
 
 ## CLI
@@ -383,10 +389,10 @@ npx admissible help
 defaults to a public one and the environment is only ever an override. `mirror` needs
 `PRIVATE_KEY` and testnet CTC.
 
-Every command accepts an `easscan.org/attestation/view/0x…` URL in place of a bare UID.
+Any command accepts an `easscan.org/attestation/view/0x…` URL instead of a bare UID.
 
-Schema-wide mirroring is a library function rather than a CLI verb — call `mirrorSchema`,
-or use the `/batch` page in the web app.
+Mirroring at schema scale is a library call, not a CLI verb — invoke `mirrorSchema`, or
+use the `/batch` page in the web app.
 
 ## Consuming the registry from Solidity
 
@@ -427,4 +433,4 @@ public, so without it a borrower could present a stranger's credential.
 If the attestation is later revoked on Ethereum and that revocation is mirrored, this call
 starts returning false — no redeployment, no migration.
 
-Every read function is documented in [registry](./registry.md).
+All read functions are spelled out in [registry](./registry.md).

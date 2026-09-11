@@ -1,8 +1,8 @@
 # Architecture
 
-Admissible is five components around one idea: an Ethereum attestation, proven onto
-Creditcoin through the Attestcoin Protocol, stored in a registry that any Creditcoin
-contract can read.
+Admissible consists of five pieces orbiting a single concept: take an Ethereum attestation,
+prove it onto Creditcoin via the Attestcoin Protocol, and record it in a registry that any
+Creditcoin contract can query.
 
 ## The flow
 
@@ -22,11 +22,11 @@ AttestationRegistry.submit(...)  on Creditcoin
 Registry stores (chainKey, uid) → MirroredAttestation.  Any Creditcoin contract can now read it.
 ```
 
-Revocation runs the identical path over the `Revoked` event and flips `revoked = true`.
+Revocation follows the same path, except it operates on the `Revoked` event and sets `revoked = true`.
 
 ## Trust boundaries
 
-Worth being precise about what is trusted, because the answer is the product.
+It is worth being precise about which parts are trusted, because the answer defines the product.
 
 | Component | Trusted? |
 |---|---|
@@ -37,22 +37,22 @@ Worth being precise about what is trusted, because the answer is the product.
 | easscan GraphQL | **No.** Used for UID discovery and as an independent cross-check, never as an input to on-chain state |
 | This README | **No.** See [verify](./verify.md) |
 
-The only party who can put a false entry in the registry is one who can forge an
-Attestcoin proof, or who controls the canonical EAS contract on Ethereum.
+The sole entity capable of inserting a false entry into the registry is someone who can
+forge an Attestcoin proof, or who controls the canonical EAS contract on Ethereum.
 
 ## Components
 
 ### EASReader — `contracts/src/EASReader.sol`
 
-A reusable Solidity library. It is the part that knows what EAS looks like.
+A reusable Solidity library that understands EAS log structure.
 
 Responsibilities:
 
-- **Assert the emitter.** Every log's `address_` must equal the canonical EAS address for
-  that chainKey. Without this, anyone could deploy a fake EAS clone, emit a byte-identical
-  `Attested` log, obtain a perfectly valid Attestcoin proof, and write arbitrary entries
-  into the registry. This is the security core of reading a common event instead of a
-  bespoke one.
+- **Assert the emitter.** Each log's `address_` must match the canonical EAS address for
+  the relevant chainKey. Without that assertion, an attacker could deploy a fake EAS clone,
+  emit a byte-identical `Attested` log, obtain a perfectly valid Attestcoin proof, and
+  write arbitrary entries into the registry. This is the security linchpin behind reading a
+  common event rather than a bespoke one.
 - **Decode `Attested` / `Revoked` logs.** Topic layout: `topics[0]` = signature,
   `topics[1]` = recipient, `topics[2]` = attester, `topics[3]` = schemaUID, `data` = the
   32-byte `uid`. The UID — the primary key of the whole EAS — is *not* indexed, so it can
@@ -62,21 +62,21 @@ Responsibilities:
   selectors. Both are decoded **completely**, including `multiAttest`'s doubly-nested
   dynamic arrays, recovering `expirationTime`, `revocable` and `refUID` — fields the
   `Attested` event itself never carries. `attestByDelegation` / `multiAttestByDelegation`
-  are deliberately not decoded (disclosed, and asserted by a test). `AttestationRegistry`
-  calls this path behind a `try/catch`, so a router-wrapped transaction degrades to
-  logs-only mirroring instead of blocking. Detail in
+  are deliberately excluded (this is disclosed and asserted by a test). `AttestationRegistry`
+  invokes this path inside a `try/catch`, so a router-wrapped transaction degrades to
+  logs-only mirroring rather than reverting. Details appear in
   [the integration doc §4](./attestcoin-integration.md).
 
-The event signatures and selectors it uses are listed in
+The event signatures and selectors it depends on are documented in
 [the integration doc](./attestcoin-integration.md).
 
 ### AttestationRegistry — `contracts/src/AttestationRegistry.sol`
 
-The Attestcoin Smart Contract. Extends `ASCBase` from `@gluwa/asc-contracts@0.2.1`, whose
-`execute` is `external` and permissionless with no source-contract binding — which is
-what makes proving a stranger's EAS transaction legal at the framework level.
+The Attestcoin Smart Contract. It extends `ASCBase` from `@gluwa/asc-contracts@0.2.1`,
+whose `execute` is `external` and permissionless with no source-contract binding — which is
+what makes proving a stranger's EAS transaction permissible at the framework level.
 
-Structure follows `ASCMinter.sol` and `ASCLoanManager.sol` from the organizer's examples
+The structure mirrors `ASCMinter.sol` and `ASCLoanManager.sol` from the organizer's examples
 repo:
 
 ```solidity
@@ -104,7 +104,7 @@ contract AttestationRegistry is ASCBase, IAdmissibleRegistry {
 }
 ```
 
-Two structural decisions that were expensive to change later, so they were settled first:
+Two structural decisions proved expensive to change later, so they were resolved up front:
 
 - **Storage is keyed on `(chainKey, uid)`, never `uid` alone.** Mainnet and Sepolia are
   different EAS contracts with independent UID spaces. Collapsing them would let a
@@ -117,21 +117,21 @@ Two structural decisions that were expensive to change later, so they were settl
 
 ### IAdmissibleRegistry — `contracts/src/IAdmissibleRegistry.sol`
 
-The consumer-facing interface, frozen so the contracts, SDK, worker and web app could be
-built in parallel. It contains **no Attestcoin types** — the entire protocol is behind it,
-so a downstream dApp integrates against attestation semantics, not proof plumbing. Full
+The consumer-facing interface, frozen early so the contracts, SDK, worker and web app could
+be built in parallel. It contains **no Attestcoin types** — the entire protocol sits behind
+it, so a downstream dApp integrates against attestation semantics, not proof plumbing. Full
 surface in [registry](./registry.md).
 
 ### CredentialGatedPool — `contracts/src/examples/CredentialGatedPool.sol`
 
-A Creditcoin lending pool that lends only to addresses holding a valid, non-revoked,
+A Creditcoin lending pool that extends credit only to addresses holding a valid, non-revoked,
 mirrored EAS credential. It is the worked example of the consumer side, and the RWA-track
 payoff: an off-chain real-world claim — an identity or compliance attestation issued on
 Ethereum — gating on-chain credit on Creditcoin.
 
 It imports `IAdmissibleRegistry` and nothing else from this project. It contains no
-Attestcoin types, does no proof handling, and runs no worker. That is the point: the pool
-demonstrates that the integration cost for a downstream dApp is one registry read.
+Attestcoin types, performs no proof handling, and runs no worker. That is the point: the pool
+demonstrates that integrating as a downstream dApp costs one registry read.
 
 The eligibility check is the conjunction of *the credential is valid* and *the credential
 is yours*: mirrored, not revoked, from the attester and schema this pool requires, and its
@@ -139,8 +139,8 @@ is yours*: mirrored, not revoked, from the attester and schema this pool require
 expensive to miss — UIDs are public, so without it any borrower could present a stranger's
 credential UID and be approved on someone else's identity.
 
-The pool goes one step further than a bare boolean gate, because "no" is not a useful
-answer on its own:
+The pool goes one step further than a bare boolean gate, because "no" alone is not a useful
+answer:
 
 ```solidity
 function presentCredential(bytes32 uid) external;                 // nominate a UID
@@ -152,7 +152,7 @@ function eligibilityStatus(address who) external view returns (Eligibility, uint
 `WrongSchema`, `NotRecipient`, `AtBorrowCap` — so the UI (or a judge at the CLI) can say
 *why* an address can or cannot borrow, not just whether. `presentCredential` is pure
 bookkeeping: it grants nothing, it only lets `eligibilityReason` answer for an address that
-has nominated a UID. The pool is deliberately a simplified credit market on top of that
+has nominated a UID. The pool is deliberately a simplified credit market atop that
 gate — interest-free, no liquidation, no collateral, a flat per-borrower cap — because the
 point being demonstrated is the credential gate, not a production lending design.
 
@@ -195,7 +195,7 @@ The gate discriminates correctly on real data, not only in tests.
 
 ### The SDK — `packages/sdk/`
 
-`@admissible/sdk`, a thin TypeScript layer over `@gluwa/usc-sdk@0.18.0` and `ethers` v6.
+`@admissible/sdk`, a thin TypeScript layer atop `@gluwa/usc-sdk@0.18.0` and `ethers` v6.
 Four modules:
 
 | Module | Job |
@@ -205,11 +205,11 @@ Four modules:
 | `resolve.ts` | Read registry state over the public Creditcoin RPC |
 | `verify.ts` | Diff registry state against easscan, produce PASS/FAIL |
 
-`mirror()` takes an `onProgress` callback emitting five stages — `resolving`,
+`mirror()` accepts an `onProgress` callback that emits five stages — `resolving`,
 `awaiting-attestation`, `building-proof`, `submitting`, `mirrored`/`failed` — carrying
 attested height, target block, continuity-root count, Merkle-sibling count and the
 Creditcoin transaction hash. The web app renders those directly; that callback is what
-makes the protocol visible rather than hidden in a backend. See [sdk](./sdk.md).
+makes the protocol visible rather than buried in a backend. See [sdk](./sdk.md).
 
 Proof acquisition is isolated behind a single function so the hosted `ProofBuilder` can
 be swapped for the SDK's `RawProofBuilder`, which computes proofs offline against the
@@ -217,7 +217,7 @@ same interface. That is the decentralization path off the hosted prover.
 
 ### The mirror worker — `worker/`
 
-Long-running process. Structure adapted from `bridge/bridge-offchain-worker/worker.ts` in
+A long-running process. Its structure is adapted from `bridge/bridge-offchain-worker/worker.ts` in
 the organizer's examples repo.
 
 - Polls EAS on **both** chainkeys — 1 (Sepolia) and 3 (mainnet).
@@ -231,7 +231,7 @@ the organizer's examples repo.
 
 ### The bench — `bench/`
 
-Generates evidence at volume. Pulls UIDs from easscan (Sepolia for throughput, mainnet
+Generates evidence at volume. It pulls UIDs from easscan (Sepolia for throughput, mainnet
 for credibility), mirrors each through the SDK, and appends **one line per attempt,
 failures included**, to `receipts/mirrors.jsonl`:
 
@@ -243,8 +243,8 @@ failures included**, to `receipts/mirrors.jsonl`:
  "timestamp":"2026-09-13T…"}
 ```
 
-Proof generation and on-chain submission are separate fields because they have different
-cost profiles — generation is free, submission costs CTC — and different failure modes. A
+Proof generation and on-chain submission are separate fields because their cost profiles
+differ — generation is free, submission costs CTC — and their failure modes diverge. A
 reader must not assume every row is a Creditcoin transaction. `queryId` and `batchIndex`
 are recorded so attestation count and transaction count are both independently derivable.
 
