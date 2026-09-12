@@ -7,6 +7,13 @@ export default defineConfig({
   plugins: [react()],
   server: {
     fs: { allow: ['..', '../..'] },
+    // Mirrors serve-static.mjs's production behavior: RELAYER_URL resolves to
+    // the page's own origin, so /mirror must be same-origin here too rather
+    // than requiring a dev-only VITE_RELAYER_URL override.
+    proxy: {
+      '/mirror': 'http://localhost:8787',
+      '/health': 'http://localhost:8787',
+    },
   },
   build: {
     outDir: 'dist',

@@ -44,7 +44,7 @@ const FLOW = [
   {
     title: 'A Creditcoin contract verifies it synchronously.',
     body:
-      'AttestationRegistry.execute hands the proof to the BlockProver precompile inside the same transaction. Native speed, no callback, no oracle to trust. The registry then decodes the receipt logs and stores every Attested event the transaction carried.',
+      'AttestationRegistry.submit hands the proof to the BlockProver precompile inside the same transaction. Native speed, no callback, no oracle to trust. The registry then decodes the receipt logs and stores every Attested event the transaction carried.',
     meta: (
       <>
         BlockProver precompile <span>{BLOCK_PROVER_PRECOMPILE}</span>

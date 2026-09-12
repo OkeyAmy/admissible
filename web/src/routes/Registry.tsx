@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Shell from '../components/Shell';
 import { Empty, Hash, Notice, ScrollTable, Stat, Working } from '../components/Bits';
 import { CHAIN_KEYS, CREDITCOIN_EXPLORER, SOURCE_CHAINS } from '../lib/config';
@@ -161,7 +162,7 @@ export default function Registry() {
             <Empty title="Nothing mirrored yet.">
               <p>
                 No <code className="mono">AttestationMirrored</code> events were found in the scanned range.
-                Mirror one from <a href="/app">the paste page</a> to see it appear here.
+                Mirror one from <Link to="/app">the paste page</Link> to see it appear here.
               </p>
             </Empty>
           ) : (
@@ -238,7 +239,8 @@ export default function Registry() {
                 </div>
               ) : (
                 <p className="section-note" style={{ marginTop: '1.2rem' }}>
-                  Reached Creditcoin genesis. Nothing older to scan.
+                  Reached the block the registry was deployed at. Nothing older to scan — the contract
+                  didn&rsquo;t exist yet.
                 </p>
               )}
             </>

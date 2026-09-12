@@ -1,74 +1,74 @@
 {
-  "generatedAt": "2026-09-11T12:50:03.594Z",
+  "generatedAt": "2026-09-12T00:41:27.986Z",
   "receiptsFile": "receipts/mirrors.jsonl",
-  "totalLines": 13354,
+  "totalLines": 74811,
   "overall": {
-    "attestationsAttempted": 13354,
-    "mirrored": 788,
-    "alreadyMirrored": 11899,
-    "failed": 667,
-    "distinctTransactions": 477,
-    "ctcSpent": "0.169945168",
+    "attestationsAttempted": 74811,
+    "mirrored": 908,
+    "alreadyMirrored": 71961,
+    "failed": 1942,
+    "distinctTransactions": 588,
+    "ctcSpent": "0.203333867",
     "proofLatencyMs": {
-      "median": 2474,
-      "p95": 8786,
-      "min": 238,
-      "max": 22111,
-      "n": 1115
+      "median": 1642,
+      "p95": 7398,
+      "min": 144,
+      "max": 920906,
+      "n": 2455
     },
     "submitLatencyMs": {
-      "median": 11817,
-      "p95": 23619,
+      "median": 10446,
+      "p95": 22371,
       "min": 516,
-      "max": 182134,
-      "n": 1115
+      "max": 182184,
+      "n": 2455
     }
   },
   "perChainKey": [
     {
       "chainKey": 1,
-      "attestationsAttempted": 7988,
-      "mirrored": 226,
-      "alreadyMirrored": 7495,
-      "failed": 267,
-      "distinctTransactions": 54,
-      "ctcSpent": "0.025928202",
+      "attestationsAttempted": 42832,
+      "mirrored": 248,
+      "alreadyMirrored": 42266,
+      "failed": 318,
+      "distinctTransactions": 76,
+      "ctcSpent": "0.02951084",
       "proofLatencyMs": {
-        "median": 1949,
+        "median": 1703,
         "p95": 2474,
         "min": 238,
-        "max": 2474,
-        "n": 337
+        "max": 3796,
+        "n": 385
       },
       "submitLatencyMs": {
         "median": 13514,
         "p95": 20549,
         "min": 1032,
         "max": 26189,
-        "n": 337
+        "n": 385
       }
     },
     {
       "chainKey": 3,
-      "attestationsAttempted": 5366,
-      "mirrored": 562,
-      "alreadyMirrored": 4404,
-      "failed": 400,
-      "distinctTransactions": 423,
-      "ctcSpent": "0.144016966",
+      "attestationsAttempted": 31979,
+      "mirrored": 660,
+      "alreadyMirrored": 29695,
+      "failed": 1624,
+      "distinctTransactions": 512,
+      "ctcSpent": "0.173823027",
       "proofLatencyMs": {
-        "median": 3726,
-        "p95": 9220,
-        "min": 701,
-        "max": 22111,
-        "n": 778
+        "median": 1569.5,
+        "p95": 7914,
+        "min": 144,
+        "max": 920906,
+        "n": 2070
       },
       "submitLatencyMs": {
-        "median": 11101.5,
-        "p95": 25163,
+        "median": 10374,
+        "p95": 22911,
         "min": 516,
-        "max": 182134,
-        "n": 778
+        "max": 182184,
+        "n": 2070
       }
     }
   ]

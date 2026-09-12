@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Shell from '../components/Shell';
 import { Empty, Hash, Notice, ScrollTable, Stat, Working } from '../components/Bits';
 import { CREDITCOIN_EXPLORER } from '../lib/config';
@@ -7,11 +7,14 @@ import { formatInt, formatIso, formatMs } from '../lib/format';
 import { loadReceipts, type ReceiptsPayload } from '../lib/receipts';
 import type { ChainKey } from '../lib/types';
 
-const ROW_LIMIT = 200;
+const PAGE_SIZES = [50, 100, 200] as const;
 
 export default function Receipts() {
   const [payload, setPayload] = useState<ReceiptsPayload | null>(null);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[0]);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -28,6 +31,29 @@ export default function Receipts() {
   }, []);
 
   const s = payload?.summary;
+
+  const filteredRows = useMemo(() => {
+    const rows = payload?.rows ?? [];
+    const q = query.trim().toLowerCase();
+    const matched = q
+      ? rows.filter(
+          (r) =>
+            r.easUid.toLowerCase().includes(q) ||
+            r.status.toLowerCase().includes(q) ||
+            (r.creditcoinTxHash ?? '').toLowerCase().includes(q) ||
+            String(r.sourceBlock ?? '').includes(q),
+        )
+      : rows;
+    return [...matched].reverse();
+  }, [payload, query]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const clampedPage = Math.min(page, pageCount - 1);
+  const pageRows = filteredRows.slice(clampedPage * pageSize, clampedPage * pageSize + pageSize);
+
+  useEffect(() => {
+    setPage(0);
+  }, [query, pageSize]);
 
   return (
     <Shell>
@@ -103,10 +129,36 @@ export default function Receipts() {
 
             <div className="section">
               <h2 className="section-title">Every attempt</h2>
+              <div className="receipts-controls" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', margin: '0.75rem 0' }}>
+                <div className="field" style={{ flex: '1 1 260px' }}>
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="search UID, status, tx hash, block…"
+                    spellCheck={false}
+                    autoComplete="off"
+                    aria-label="Search receipts"
+                  />
+                </div>
+                <label style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <span className="section-note" style={{ margin: 0 }}>
+                    rows/page
+                  </span>
+                  <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="select">
+                    {PAGE_SIZES.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <p className="section-note">
-                {payload.rows.length > ROW_LIMIT
-                  ? `Showing the most recent ${ROW_LIMIT} of ${formatInt(payload.rows.length)} rows.`
-                  : `All ${formatInt(payload.rows.length)} rows.`}
+                {query
+                  ? `${formatInt(filteredRows.length)} of ${formatInt(payload.rows.length)} rows match “${query}”.`
+                  : `All ${formatInt(payload.rows.length)} rows.`}{' '}
+                Page {clampedPage + 1} of {pageCount}.
               </p>
               <ScrollTable>
                 <table className="data">
@@ -125,7 +177,7 @@ export default function Receipts() {
                     </tr>
                   </thead>
                   <tbody>
-                    {payload.rows.slice(-ROW_LIMIT).reverse().map((r, i) => (
+                    {pageRows.map((r, i) => (
                       <tr key={`${r.easUid}-${r.timestamp}-${i}`}>
                         <td>
                           <span className={r.status === 'mirrored' ? 'pill pill-live' : r.status === 'failed' || r.status === 'error' ? 'pill pill-warn' : 'pill'}>
@@ -159,6 +211,33 @@ export default function Receipts() {
                   </tbody>
                 </table>
               </ScrollTable>
+              {filteredRows.length === 0 ? (
+                <p className="section-note" style={{ marginTop: '0.9rem' }}>
+                  No rows match “{query}”.
+                </p>
+              ) : (
+                <div className="load-more" style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    disabled={clampedPage <= 0}
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  >
+                    ← newer
+                  </button>
+                  <span className="section-note" style={{ margin: 0 }}>
+                    page {clampedPage + 1} / {pageCount}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    disabled={clampedPage >= pageCount - 1}
+                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                  >
+                    older →
+                  </button>
+                </div>
+              )}
             </div>
 
             {payload.externalSummary ? (

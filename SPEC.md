@@ -26,7 +26,9 @@ Attestcoin attestors attest the Ethereum block onto Creditcoin
   ▼
 Proof Builder service produces (merkleProof, continuityProof) for that transaction
   ▼
-AttestationRegistry.execute(...)  on Creditcoin
+AttestationRegistry.submit(...)  on Creditcoin
+  │  (ASCBase.execute is external but not virtual and drops chainKey; submit
+  │   records context then self-calls the inherited execute)
   │  ASCBase verifies via BlockProver precompile 0x…0FD2  (synchronous, native speed)
   │  EASReader decodes the receipt logs → every Attested event in the tx
   ▼

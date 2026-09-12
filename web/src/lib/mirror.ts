@@ -15,11 +15,16 @@ import type {
 
 /**
  * Server-side relayer that holds the funded Creditcoin key and submits on
- * this browser's behalf — see relayer/README.md. `VITE_RELAYER_URL` defaults
- * to the local dev relayer; set it empty to disable relaying entirely and
- * fall straight through to the needs-signer stop.
+ * this browser's behalf — see relayer/README.md. `VITE_RELAYER_URL` set
+ * explicitly (including local dev's `http://localhost:8787`) is used as-is;
+ * set it to the empty string to disable relaying entirely and fall straight
+ * through to the needs-signer stop. Left unset, it resolves to the page's own
+ * origin at runtime rather than a host baked in at build time — serve-static
+ * proxies same-origin `/mirror` to the local relayer, so this stays correct
+ * whether the site is reached by IP, domain, http, or https.
  */
-export const RELAYER_URL = ((import.meta.env as Record<string, string | undefined>).VITE_RELAYER_URL ?? 'http://localhost:8787').trim();
+const rawRelayerUrl = (import.meta.env as Record<string, string | undefined>).VITE_RELAYER_URL;
+export const RELAYER_URL = (rawRelayerUrl === undefined ? window.location.origin : rawRelayerUrl).trim();
 
 export interface RelayerMirrorRequest {
   action: number;

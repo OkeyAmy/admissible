@@ -22,7 +22,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "admissible": "./dist/cjs/bin/admissible.js"
+    "admissible": "dist/cjs/bin/admissible.js"
   },
   "files": [
     "dist",

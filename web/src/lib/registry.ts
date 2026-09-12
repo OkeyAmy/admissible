@@ -38,6 +38,46 @@ export async function resolveRegistryAddress(): Promise<string> {
   return addressProbe;
 }
 
+/**
+ * The block the registry was deployed at — scanning below it can never find
+ * an AttestationMirrored/AttestationRevoked event (the contract didn't exist
+ * yet), so event scans floor here instead of walking all the way to genesis.
+ */
+let deploymentBlock: number | null = null;
+let deploymentBlockProbe: Promise<number> | null = null;
+
+async function resolveDeploymentBlock(): Promise<number> {
+  if (deploymentBlock !== null) return deploymentBlock;
+  if (!deploymentBlockProbe) {
+    deploymentBlockProbe = (async () => {
+      try {
+        const res = await fetch('/deployments.json', { cache: 'no-store' });
+        if (!res.ok) return 0;
+        const json = (await res.json()) as Record<string, unknown>;
+        const n = pickDeploymentBlock(json);
+        deploymentBlock = n ?? 0;
+        return deploymentBlock;
+      } catch {
+        deploymentBlock = 0;
+        return 0;
+      }
+    })();
+  }
+  return deploymentBlockProbe;
+}
+
+function pickDeploymentBlock(obj: Record<string, unknown>): number | null {
+  const direct = obj['blockNumber'];
+  if (typeof direct === 'number' && direct > 0) return direct;
+  for (const value of Object.values(obj)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const inner = pickDeploymentBlock(value as Record<string, unknown>);
+      if (inner) return inner;
+    }
+  }
+  return null;
+}
+
 function pickAddress(obj: Record<string, unknown>, key: string): string | null {
   const direct = obj[key];
   if (typeof direct === 'string' && /^0x[0-9a-fA-F]{40}$/.test(direct)) return direct;
@@ -128,6 +168,12 @@ export async function readEasAddress(chainKey: ChainKey): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export const LOG_WINDOW = 9_000;
+// Floor for the shrinking-window retry below. The 9,000-block figure was
+// measured live on 2026-09-10 against an idle RPC; under load (many
+// concurrent worker/bench/relayer submissions hitting the same public
+// endpoint) the same call can time out, observed live on 2026-09-11. Rather
+// than hard-fail the whole scan, retry the failing window at a smaller size.
+const MIN_LOG_WINDOW = 500;
 
 const iface = new Interface([...REGISTRY_ABI]);
 export const TOPIC_MIRRORED = keccakId(
@@ -177,6 +223,7 @@ export async function scanMirrorEvents(opts: ScanOptions = {}): Promise<ScanResu
   const tip = opts.before ?? (await provider.getBlockNumber());
   const limit = opts.limit ?? 60;
   const maxWindows = opts.maxWindows ?? 8;
+  const floor = await resolveDeploymentBlock();
 
   const chainKeyTopic =
     opts.chainKey === null || opts.chainKey === undefined
@@ -187,16 +234,27 @@ export async function scanMirrorEvents(opts: ScanOptions = {}): Promise<ScanResu
   let to = tip;
   let windows = 0;
   let exhausted = false;
+  let window = LOG_WINDOW;
 
-  while (rows.length < limit && windows < maxWindows && to >= 0) {
+  while (rows.length < limit && windows < maxWindows && to >= floor) {
     if (opts.signal?.aborted) break;
-    const from = Math.max(0, to - LOG_WINDOW);
-    const logs = await provider.getLogs({
-      address,
-      fromBlock: from,
-      toBlock: to,
-      topics: chainKeyTopic ? [TOPIC_MIRRORED, chainKeyTopic] : [TOPIC_MIRRORED],
-    });
+    let from = Math.max(floor, to - window);
+    let logs;
+    for (;;) {
+      try {
+        logs = await provider.getLogs({
+          address,
+          fromBlock: from,
+          toBlock: to,
+          topics: chainKeyTopic ? [TOPIC_MIRRORED, chainKeyTopic] : [TOPIC_MIRRORED],
+        });
+        break;
+      } catch (err) {
+        if (window <= MIN_LOG_WINDOW) throw err;
+        window = Math.max(MIN_LOG_WINDOW, Math.floor(window / 3));
+        from = Math.max(floor, to - window);
+      }
+    }
     for (const log of logs.reverse()) {
       const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
       if (!parsed) continue;
@@ -215,9 +273,9 @@ export async function scanMirrorEvents(opts: ScanOptions = {}): Promise<ScanResu
     }
     opts.onWindow?.(from, to, rows.length);
     windows += 1;
-    if (from === 0) {
+    if (from <= floor) {
       exhausted = true;
-      to = -1;
+      to = floor - 1;
       break;
     }
     to = from - 1;
@@ -290,18 +348,30 @@ export async function scanRevocationEvents(opts: ScanOptions = {}): Promise<Revo
   const tip = opts.before ?? (await provider.getBlockNumber());
   const maxWindows = opts.maxWindows ?? 8;
   const limit = opts.limit ?? 40;
+  const floor = await resolveDeploymentBlock();
   const rows: RevocationEventRow[] = [];
   let to = tip;
   let windows = 0;
+  let window = LOG_WINDOW;
 
-  while (rows.length < limit && windows < maxWindows && to >= 0) {
-    const from = Math.max(0, to - LOG_WINDOW);
-    const logs = await provider.getLogs({
-      address,
-      fromBlock: from,
-      toBlock: to,
-      topics: [TOPIC_REVOKED_EVENT],
-    });
+  while (rows.length < limit && windows < maxWindows && to >= floor) {
+    let from = Math.max(floor, to - window);
+    let logs;
+    for (;;) {
+      try {
+        logs = await provider.getLogs({
+          address,
+          fromBlock: from,
+          toBlock: to,
+          topics: [TOPIC_REVOKED_EVENT],
+        });
+        break;
+      } catch (err) {
+        if (window <= MIN_LOG_WINDOW) throw err;
+        window = Math.max(MIN_LOG_WINDOW, Math.floor(window / 3));
+        from = Math.max(floor, to - window);
+      }
+    }
     for (const log of logs.reverse()) {
       const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
       if (!parsed) continue;
@@ -315,7 +385,7 @@ export async function scanRevocationEvents(opts: ScanOptions = {}): Promise<Revo
       });
     }
     windows += 1;
-    if (from === 0) break;
+    if (from <= floor) break;
     to = from - 1;
   }
   return rows.slice(0, limit);
