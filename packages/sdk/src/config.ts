@@ -96,7 +96,7 @@ export const EAS_SELECTORS = {
  * Resolution order: explicit option → REGISTRY_ADDRESS env → repo
  * `contracts/deployments.json` → this constant.
  */
-export const DEFAULT_REGISTRY_ADDRESS = '';
+export const DEFAULT_REGISTRY_ADDRESS = '0xA972422a821F622bcC1a72d0B19242F1ae2C6047';
 
 function env(name: string): string | undefined {
   const v = process.env[name];

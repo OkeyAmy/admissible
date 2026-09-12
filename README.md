@@ -380,7 +380,7 @@ What has actually happened, on chain, as of this writing:
 |---|---|
 | Schema registered on Sepolia `SchemaRegistry` (`"bool admissibleDemoVerified2026"`, `revocable: true`) | done — tx `0x7f62d7cd45cf20b32de4a83b031b7e18f2d691363e122765e64314b5df5a6052` |
 | Attestation issued (self-issued, recipient = attester = `0xA5B3d738FB24C880a2BB1Bc4Ec65475489889714`) | done — tx `0x8771a1dd1c69d7758ce9fb753534e89a2e2548a50502b475f06e05a6a17a5720`, block 11,681,621, UID `0x751a62300a8db56f65a5cc0f94fa3892ba814070262c007a2d76f1e3c960196a` |
-| Revoke on Sepolia, then prove and mirror the `Revoked` event | pending — registry `totalRevoked()` read `0` at `2026-09-11T11:34:49Z` |
+| Revoke on Sepolia, then prove and mirror the `Revoked` event | done — revoke tx `0x225518f910e085b865062ea6450d99170fb5bdcc7a41ba1a00b7fe49c8e4b2de`, block 11,681,689; the registry flipped the demo UID to `revoked = true` (`totalRevoked()` reads `1`) |
 
 Read the current number directly:
 
@@ -389,12 +389,30 @@ cast call 0xA972422a821F622bcC1a72d0B19242F1ae2C6047 "totalRevoked()(uint256)" \
   --rpc-url https://rpc.cc3-testnet.creditcoin.network
 ```
 
-Until that reads above zero, treat revocation as **a mechanism implemented and tested**,
-not a completed live instance: the revoke path runs the identical proof pipeline as a
-mirror, decoding `Revoked` instead of `Attested` and flipping `revoked = true`, and two of
-the registry's mutation-checked security tests
+Revocation is therefore a **completed live instance**, not a promise: the revoke path runs
+the identical proof pipeline as a mirror, decoding `Revoked` instead of `Attested` and
+flipping `revoked = true`, and two of the registry's mutation-checked security tests
 (`test_RevertWhen_SourceReceiptStatusIsZero`, `test_RevertWhen_FailedReceiptIsRevoked`,
 `contracts/MUTATION-CHECK.md`) specifically target this path.
+
+#### How mainnet revocations are discovered (by default and at scale)
+
+Revocations are rare in the wild, and no free source exposes a revocation-txid field
+(easscan's GraphQL has none, verified by introspection). The worker therefore discovers
+`Revoked` logs itself, filtered to the EAS address, in two modes:
+
+- **Default (no key):** a rolling `~700`-block window on the free mainnet RPC, re-scanned
+  every cycle. Robust against noisy free endpoints (tries several hosts — the public
+  endpoints nondeterministically route `eth_getLogs` to archive-token-gated backends).
+  Catches revocations within the last few hours of a running worker.
+- **Full history (optional):** set a free `ETHERSCAN_API_KEY` (etherscan.io) in `vouchsafe/.env`
+  and the worker walks the entire mainnet `Revoked` history newest-first via Etherscan V2
+  `getLogs` — a bounded, resumable backfill that also retroactively catches older
+  revocations like `0x0e2b3b32812878986ce9da6a3e2fa293a05fe3b332d45851d2893b64ae49bad4`
+  (revoked `2026-07-27`, still *before* its mirror — a known, reproducible FAIL case that
+  becomes a PASS once the backfill catch-up passes that block). Without the key, historical
+  mainnet revocations are outside the reachable window and remain recorded as such in
+  `receipts/mirrors.jsonl`.
 
 ---
 

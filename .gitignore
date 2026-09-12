@@ -24,3 +24,9 @@ docs/design-refs/
 *.tsbuildinfo
 worker/state.json
 web/public/receipts/
+
+# Submission prep materials — deck PDF/logo and the ad-video (Remotion) project.
+# The deck is submitted as a PDF URL; the ad video is a workshop deliverable,
+# not repo code. Anchored so web/public/ stays tracked.
+/public/
+/video/

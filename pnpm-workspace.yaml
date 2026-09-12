@@ -4,6 +4,7 @@ packages:
   - 'web'
   - 'bench'
   - 'relayer'
+  - 'video'
 
 allowBuilds:
   esbuild: true
