@@ -191,6 +191,48 @@ Full technical detail: [docs/attestcoin-integration.md](docs/attestcoin-integrat
 Measured 2026-09-10: Attestcoin's mainnet attestation lag is **42 blocks (~8 minutes)**.
 Sepolia enforces a **32-block reorg-protection window**.
 
+## On-chain vs off-chain attestations — what can be mirrored, and why
+
+EAS has two ways of recording an attestation, and Admissible can only ever mirror one of
+them. The distinction is not a limitation of this project — it is a property of what can
+be cryptographically proven at all.
+
+| | **On-chain** | **Off-chain** |
+|---|---|---|
+| Written by | `attest()` / `multiAttest()` (or `revoke()`) in a real Ethereum transaction | signed privately, never submitted as a transaction |
+| Lives in | a block, with a tx hash and receipt logs | the holder's own signed payload (EIP-712 style) |
+| easscan `txid` field | `0x…` (a real transaction) | empty (`""`) |
+| easscan `isOffchain` | `false` | `true` |
+| Proves on Creditcoin | ✅ a merkle + continuity proof pins the transaction in a block | ❌ there is no transaction to pin a proof to |
+| Revokes on Creditcoin | ✅ `revoke()` is provable the same way | ❌ `revokeOffchain()` also lives off-chain |
+
+**Admissible proves transactions.** A merkle proof is a proof of (a transaction in a
+block); an off-chain attestation exists in no block, so there is nothing for the BlockProver
+precompile to verify and nothing for the registry to store. Attempting to mirror an
+off-chain UID correctly fails at the first stage with "this UID was never written in an
+Ethereum transaction, so there is nothing to prove" — the app tells the truth rather than
+fabricating a receipt for something that has none.
+
+This is why every mirroring path in the project — the worker, the bench, and the SDK's
+batch builder — filters easscan queries with `where: { txid: { not: { equals: "" } } }`,
+and why the SDK's `mirror()` throws an explicit `OffchainAttestationError` when handed
+such a UID (`packages/sdk/src/mirror.ts:108`).
+
+**Two practical notes for pasting UIDs into the demo app:**
+
+- **Match the chain.** A UID is unique to one EAS deployment. A mainnet UID pasted while
+  the Sepolia toggle is active resolves to "easscan has no attestation … on chainKey 1"
+  (a failure), because the record exists on chainKey 3 and not on chainKey 1. UIDs from
+  `receipts/mirrors.jsonl` know their chain — mirror the toggle on the demo page to the
+  row's `sourceChainKey` before pasting.
+- **Already-mirrored is the success you're looking for.** Some of the most compelling UIDs
+  to paste are ones the registry has *already* mirrored (including attestations written
+  years before this project existed — the registry reads them all). For those, the app
+  resolves stage 1, finds the existing record, and shows **"Already mirrored."** with the
+  record read live from Creditcoin — it does not re-submit or double-spend. Distinguish
+  that word from **"Not mirrored."**, which is the failure verdict, and **"Proof built."**,
+  which means every public step ran but submission needs a funded signer.
+
 ---
 
 ## Quickstart
