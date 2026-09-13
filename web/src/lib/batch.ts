@@ -3,7 +3,7 @@ import { MIRROR_ACTION, REGISTRY_WRITE_ABI } from './abi';
 import { DEMO_PRIVATE_KEY, PROVER_URL } from './config';
 import { creditcoinProvider, locateSourceTx, readAttestedTip } from './chain';
 import { fetchBySchema } from './easscan';
-import { ProverError } from './prover';
+import { getAttestedHeight, ProverError } from './prover';
 import { resolveRegistryAddress } from './registry';
 import { RELAYER_URL, hasSigner, relayerReachable, submitViaRelayer } from './mirror';
 import type { ChainKey, EasAttestation } from './types';
@@ -240,14 +240,22 @@ export async function runSchemaMirror(opts: RunOptions): Promise<RunSummary> {
     const state: BatchState = { ...batch, status: 'waiting', creditcoinTxHashes: [] };
     onBatch({ ...state });
 
-    // The batch's newest block must be attested before the prover will answer.
+    // The batch's newest block must be attested before the prover will answer —
+    // checked against the prover's own cache first (that's what actually gates
+    // proof-building), falling back to the ChainInfo precompile only if that
+    // HTTP call itself fails, so a transient RPC hiccup can't fail the batch.
     try {
       for (;;) {
         if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
-        const tip = await readAttestedTip(plan.chainKey);
-        state.note = `attested height ${tip.height.toLocaleString('en-US')} / target ${batch.toBlock.toLocaleString('en-US')}`;
+        let height: number;
+        try {
+          height = await getAttestedHeight(plan.chainKey, signal);
+        } catch {
+          height = (await readAttestedTip(plan.chainKey)).height;
+        }
+        state.note = `attested height ${height.toLocaleString('en-US')} / target ${batch.toBlock.toLocaleString('en-US')}`;
         onBatch({ ...state });
-        if (tip.height >= batch.toBlock) break;
+        if (height >= batch.toBlock) break;
         await new Promise((r) => setTimeout(r, 6000));
       }
     } catch (e) {

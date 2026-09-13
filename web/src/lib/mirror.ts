@@ -233,14 +233,17 @@ export async function mirror(opts: MirrorOptions): Promise<MirrorOutcome> {
   const targetBlock = located.blockNumber;
   for (;;) {
     if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
-    // Read straight off the ChainInfo precompile 0x…0fd3, with the prover's
-    // HTTP height as a fallback if the eth_call fails.
+    // The prover's own attestation cache gates proof-building, not the raw
+    // on-chain precompile — a block can show attested on-chain slightly
+    // before the prover's cache has ingested it, and proof-by-tx fails until
+    // it has. So the prover's height is checked first; the ChainInfo
+    // precompile 0x…0fd3 is only a fallback if that HTTP call itself fails.
     let attestedHeight: number;
     try {
+      attestedHeight = await getAttestedHeight(chainKey, signal);
+    } catch {
       const tip = await readAttestedTip(chainKey);
       attestedHeight = tip.height;
-    } catch {
-      attestedHeight = await getAttestedHeight(chainKey, signal);
     }
     emit({ stage: 'awaiting-attestation', attestedHeight, targetBlock, sourceTxHash: eas.txid, txIndex: located.txIndex });
     if (attestedHeight >= targetBlock) break;

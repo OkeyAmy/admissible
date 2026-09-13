@@ -12,6 +12,17 @@ const PORT = Number(process.env.WEB_PORT ?? 80);
 const RELAYER_HOST = process.env.RELAYER_HOST ?? '127.0.0.1';
 const RELAYER_PORT = Number(process.env.RELAYER_PORT ?? 8787);
 
+// These three are also copied into web/dist at build time (sync-assets.mjs),
+// but that copy is a snapshot — it only updates on the next rebuild. Bench
+// and the contracts workspace write their canonical files continuously, so
+// serve directly from those paths instead: no rebuild needed for these to
+// reflect current state.
+const LIVE_FILES = {
+  '/receipts/mirrors.jsonl': join(here, '..', 'receipts', 'mirrors.jsonl'),
+  '/receipts/summary.json': join(here, '..', 'receipts', 'summary.json'),
+  '/deployments.json': join(here, '..', 'contracts', 'deployments.json'),
+};
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -66,9 +77,21 @@ function proxy(req, res, pathname) {
   req.pipe(upstream);
 }
 
+function serveLive(res, absPath) {
+  if (!existsSync(absPath)) { res.writeHead(404); res.end('Not Found'); return; }
+  const st = statSync(absPath);
+  res.writeHead(200, {
+    'Content-Type': extname(absPath) === '.json' ? MIME['.json'] : 'application/x-ndjson; charset=utf-8',
+    'Content-Length': st.size,
+    'Cache-Control': 'no-store',
+  });
+  createReadStream(absPath).pipe(res);
+}
+
 createServer((req, res) => {
   const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
   if (pathname === '/health' || pathname === '/mirror') { proxy(req, res, pathname); return; }
+  if (pathname in LIVE_FILES) { serveLive(res, LIVE_FILES[pathname]); return; }
   serveStatic(req, res, pathname);
 }).listen(PORT, () => {
   console.log(`admissible-web: serving ${DIST} on :${PORT}, proxying /health /mirror -> ${RELAYER_HOST}:${RELAYER_PORT}`);
