@@ -48,6 +48,24 @@ export const CHAIN_INFO_ABI = [
   'function get_supported_chains() view returns (tuple(uint64 chainKey, uint64 chainId, bytes chainName, uint32 chainEncoding)[] chains)',
 ] as const;
 
+/** CredentialGatedPool — the RWA-track consumer of the registry. */
+export const POOL_ABI = [
+  'function eligibilityOf(address who, bytes32 uid) view returns (uint8 status, string reason, uint256 headroom)',
+  'function eligibilityReason(address who) view returns (string reason)',
+  'function eligibilityStatus(address who) view returns (uint8 status, uint256 headroom)',
+  'function hasCredential(address who, bytes32 uid) view returns (bool)',
+  'function credentialOf(address who) view returns (bytes32)',
+  'function requiredAttester() view returns (address)',
+  'function requiredSchema() view returns (bytes32)',
+  'function chainKey() view returns (uint64)',
+  'function borrowCap() view returns (uint256)',
+  'function totalDeposits() view returns (uint256)',
+  'function totalDebt() view returns (uint256)',
+  'function availableLiquidity() view returns (uint256)',
+  'function deposits(address who) view returns (uint256)',
+  'function debt(address who) view returns (uint256)',
+] as const;
+
 /** EAS Attested/Revoked, for decoding logs recovered from foreign calldata. */
 export const EAS_EVENT_ABI = [
   'event Attested(address indexed recipient, address indexed attester, bytes32 uid, bytes32 indexed schemaUID)',
@@ -56,3 +74,20 @@ export const EAS_EVENT_ABI = [
 
 export const MIRROR_ACTION = 0;
 export const REVOKE_ACTION = 1;
+
+/**
+ * EAS `attest`, called directly from the visitor's own connected wallet in
+ * the sandbox flow — this is the same function any EAS UI (including
+ * easscan's own) calls, not something Admissible-specific.
+ */
+export const EAS_ATTEST_ABI = [
+  'function attest((bytes32 schema, (address recipient, uint64 expirationTime, bool revocable, bytes32 refUID, bytes data, uint256 value) data) request) payable returns (bytes32)',
+] as const;
+
+/** CredentialGatedPool write path — signed by the visitor's own wallet, never a key we hold. */
+export const POOL_WRITE_ABI = [
+  ...POOL_ABI,
+  'function presentCredential(bytes32 uid)',
+  'function borrow(bytes32 uid, uint256 amount)',
+  'function repay() payable',
+] as const;

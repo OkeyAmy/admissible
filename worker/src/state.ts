@@ -21,13 +21,27 @@ export interface ChainCursor {
 }
 
 export interface RevokeLogCursor {
-  /** Next block to start scanning `Revoked` logs from (Sepolia only — see index.ts). */
+  /** Next block to start scanning `Revoked` logs from. Sepolia scans forward
+   *  (eth_getLogs); mainnet scans backward from head (Etherscan getLogs), so
+   *  this is the earliest block already processed. */
   fromBlock: number;
+}
+
+export interface MainnetRevokeStuck {
+  /** Block where a slice kept hitting `skipped-not-attested` prover errors. */
+  atBlock: number;
+  /** Consecutive poll cycles that slice has stayed unattested. */
+  count: number;
 }
 
 export interface WorkerState {
   chains: Record<'1' | '3', ChainCursor>;
   sepoliaRevokeLog: RevokeLogCursor;
+  /** Mainnet Revoked-log backfill cursor — see index.ts `pollRevokeMainnet`. */
+  mainnetRevokeLog: RevokeLogCursor;
+  /** Bounded-retry marker so a permanently unprovable group cannot stall the
+   *  mainnet backfill forever. See index.ts `pollRevokeMainnetEtherscan`. */
+  mainnetRevokeStuck: MainnetRevokeStuck;
   /** Bumped every time the worker completes a poll cycle; informational only. */
   cycles: number;
   updatedAt: string;
@@ -40,6 +54,8 @@ function defaultState(): WorkerState {
       '3': { lastSeenAttestTime: 0, lastSeenRevokeTime: 0 },
     },
     sepoliaRevokeLog: { fromBlock: 0 },
+    mainnetRevokeLog: { fromBlock: 0 },
+    mainnetRevokeStuck: { atBlock: 0, count: 0 },
     cycles: 0,
     updatedAt: new Date().toISOString(),
   };
@@ -53,6 +69,8 @@ export function loadState(): WorkerState {
     return {
       chains: { ...base.chains, ...(parsed.chains ?? {}) },
       sepoliaRevokeLog: { ...base.sepoliaRevokeLog, ...(parsed.sepoliaRevokeLog ?? {}) },
+      mainnetRevokeLog: { ...base.mainnetRevokeLog, ...(parsed.mainnetRevokeLog ?? {}) },
+      mainnetRevokeStuck: { ...base.mainnetRevokeStuck, ...(parsed.mainnetRevokeStuck ?? {}) },
       cycles: parsed.cycles ?? 0,
       updatedAt: parsed.updatedAt ?? base.updatedAt,
     };

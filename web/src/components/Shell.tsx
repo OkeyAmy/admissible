@@ -6,6 +6,8 @@ import { truncateHash } from '../lib/format';
 
 const FOOTER_LINKS: [string, string][] = [
   ['Registry', '/registry'],
+  ['Pool', '/pool'],
+  ['Sandbox', '/sandbox'],
   ['Verify', '/verify'],
   ['Revocation', '/revocation'],
   ['SDK', '/sdk'],

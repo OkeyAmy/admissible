@@ -46,7 +46,7 @@ export async function resolveRegistryAddress(): Promise<string> {
 let deploymentBlock: number | null = null;
 let deploymentBlockProbe: Promise<number> | null = null;
 
-async function resolveDeploymentBlock(): Promise<number> {
+export async function resolveDeploymentBlock(): Promise<number> {
   if (deploymentBlock !== null) return deploymentBlock;
   if (!deploymentBlockProbe) {
     deploymentBlockProbe = (async () => {
@@ -78,7 +78,7 @@ function pickDeploymentBlock(obj: Record<string, unknown>): number | null {
   return null;
 }
 
-function pickAddress(obj: Record<string, unknown>, key: string): string | null {
+export function pickAddress(obj: Record<string, unknown>, key: string): string | null {
   const direct = obj[key];
   if (typeof direct === 'string' && /^0x[0-9a-fA-F]{40}$/.test(direct)) return direct;
   if (direct && typeof direct === 'object') {
@@ -173,7 +173,7 @@ export const LOG_WINDOW = 9_000;
 // concurrent worker/bench/relayer submissions hitting the same public
 // endpoint) the same call can time out, observed live on 2026-09-11. Rather
 // than hard-fail the whole scan, retry the failing window at a smaller size.
-const MIN_LOG_WINDOW = 500;
+export const MIN_LOG_WINDOW = 500;
 
 const iface = new Interface([...REGISTRY_ABI]);
 export const TOPIC_MIRRORED = keccakId(

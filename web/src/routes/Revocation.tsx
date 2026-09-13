@@ -88,32 +88,19 @@ export default function Revocation() {
           <span className="eyebrow">Revocation</span>
           <h1 className="page-title">Withdrawing it, too.</h1>
           <p className="page-lede">
-            Revocation runs the identical pipeline as mirroring, over the EAS <code className="mono">Revoked</code>{' '}
-            event instead of <code className="mono">Attested</code>, submitted with action discriminator{' '}
-            <code className="mono">1</code> instead of <code className="mono">0</code>. The same BlockProver
-            precompile verifies the same shape of proof; the registry flips{' '}
-            <code className="mono">revoked = true</code> and stamps <code className="mono">revokedAt</code> to the
-            Creditcoin block timestamp. Any contract calling <code className="mono">isValid(...)</code> or{' '}
-            <code className="mono">isValidFrom(...)</code> starts returning false immediately, with no
-            redeployment and no migration.
+            Same pipeline as mirroring, over EAS's <code className="mono">Revoked</code> event. The registry flips{' '}
+            <code className="mono">revoked = true</code> — any contract calling{' '}
+            <code className="mono">isValid(...)</code> starts returning false immediately, no migration.
           </p>
         </div>
 
         <Notice warm>
-          <strong>The revocation demonstration below uses a self-issued attestation.</strong> A sweep of 15,000
-          recent Sepolia blocks found zero <code className="mono">Revoked</code> events, and easscan returns only
-          a handful ever — naturally-occurring EAS revocations are genuinely rare. What is demonstrated is the
-          revocation <em>mechanism</em>: the <code className="mono">Revoked</code> topic proven through the same
-          BlockProver path, flipping real registry state on Creditcoin. It is not a third-party revocation and is
-          not presented as one. Every other proof in this project is of a transaction we did not create.
+          Organic EAS revocations are rare — a 15,000-block Sepolia sweep found zero. The row below is a
+          self-issued attestation, revoked to demonstrate the mechanism, disclosed as such.
         </Notice>
 
         <div className="section">
           <h2 className="section-title">Live from the registry</h2>
-          <p className="section-note">
-            Read directly from the <code className="mono">AttestationRevoked</code> event log on the deployed
-            registry — nothing on this page is hardcoded.
-          </p>
 
           {loading ? (
             <div className="page-loading">
@@ -122,13 +109,7 @@ export default function Revocation() {
           ) : error ? (
             <Notice warm>{error}</Notice>
           ) : rows.length === 0 ? (
-            <Empty title="No revocations mirrored yet.">
-              <p>
-                None of the recently scanned Creditcoin blocks contain an{' '}
-                <code className="mono">AttestationRevoked</code> event. Run the demo revocation from the worker,
-                or check back after it has — this page will show it as soon as it is on-chain.
-              </p>
-            </Empty>
+            <Empty title="No revocations mirrored yet." />
           ) : (
             <ScrollTable>
               <table className="data">
@@ -173,18 +154,6 @@ export default function Revocation() {
           )}
         </div>
 
-        <div className="section">
-          <h2 className="section-title">Why revocation matters for credit</h2>
-          <p className="section-note" style={{ maxWidth: 'var(--measure)' }}>
-            A KYC or credential attestation that can only ever be added, never withdrawn, is not admissible
-            evidence — it is a permanent claim that can outlive its truth. A revoked EAS attestation on Ethereum
-            that a Creditcoin lending contract cannot see is a live risk: the credential looks valid on-chain
-            long after its issuer withdrew it in the source of truth. Mirroring{' '}
-            <code className="mono">Revoked</code> through the identical Attestcoin path closes that gap without
-            an oracle, a bridge, or a second signature — the same proof mechanics that admit a claim can retract
-            it.
-          </p>
-        </div>
       </section>
     </Shell>
   );

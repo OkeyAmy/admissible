@@ -67,7 +67,7 @@ export function ScrollTable({ children }: { children: ReactNode }) {
   return <div className="scroll-x">{children}</div>;
 }
 
-export function Empty({ title, children }: { title: string; children: ReactNode }) {
+export function Empty({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="empty">
       <h3>{title}</h3>

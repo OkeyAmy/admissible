@@ -104,6 +104,48 @@ export const EXAMPLE_UIDS: { uid: string; chainKey: ChainKey; note: string }[] =
   },
 ];
 
+/**
+ * Real holders of the pool's required (attester, schema) pair on Ethereum
+ * mainnet, resolved live via easscan on 2026-09-12 and confirmed already
+ * mirrored + valid on the registry (isValid == true for all four). None of
+ * these are keys we control — presentCredential() is msg.sender-scoped, so
+ * we cannot call it on their behalf, and that is by design: it is the same
+ * property that makes eligibility here non-fabricable. eligibilityOf(...)
+ * needs no prior presentCredential call, so a judge can check any of these
+ * addresses and see a real, live "Eligible" result.
+ */
+export const EXAMPLE_POOL_BORROWERS: { address: string; uid: string; note: string }[] = [
+  {
+    address: '0xDC5EF2B3f1b716cb62230B705D603944F8262cE9',
+    uid: '0x574c2482fb029ed3d7dc3cd68e243dc63e4ae2b964d8eac1afe1803b9da6c996',
+    note: 'mirrored mainnet credential · block 24,782,584',
+  },
+  {
+    address: '0x0893990a2CB663864e2BBC74425967E25cb2eA50',
+    uid: '0xb386564fb203d91c2bdd0baf2a32c30ff7c0125bce39e748818dde114b038633',
+    note: 'same attester+schema · easscan 2026-09-12',
+  },
+  {
+    address: '0x46fF491D7054A6F500026B3E81f358190f8d8Ec5',
+    uid: '0xd64d5c84a84c16eebca065e8ec8841ddc04f3b55e53877494dfa8675b953fd19',
+    note: 'same attester+schema · easscan 2026-09-12',
+  },
+  {
+    address: '0x19E00225FeA64a53Ef0086FbEEfb0195986dCE53',
+    uid: '0x67acab71cc1c802ce3c54cb6389245dc838fa4184ae8c4dabd13df98ae2f85d9',
+    note: 'same attester+schema · easscan 2026-09-12',
+  },
+];
+
+/**
+ * A registered, working Sepolia EAS schema (a single `bool` field, "Write a
+ * Message" family) used by the sandbox's self-attest step. Any registered
+ * schema would do — the sandbox pool's requiredSchema is wildcard — this one
+ * is reused because it was already proven to work in an earlier self-issued
+ * attestation in this project (see docs/DEMO-SCRIPT.md).
+ */
+export const SANDBOX_SCHEMA = '0xd7a630e8afc8591dbfbadd9435caa4602405228a3ee190bad35172aa32636faa';
+
 /** Measured pre-build baseline, committed in prebuild-evidence/. SPEC.md §3. */
 export const BASELINE = {
   sample: 11,

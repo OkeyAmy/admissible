@@ -12,11 +12,19 @@ export class ProverError extends Error {
   }
   /**
    * BlockNotOnSourceChain means the block is still inside the source chain's
-   * reorg-protection window. SPEC §3: retryable, not fatal. The UI renders this
-   * as "waiting for confirmations", never as a failure.
+   * reorg-protection window. The prover also reports plain "not attested to
+   * yet" (no BlockNotOnSourceChain code, seen live 2026-09-13) when the
+   * attested height simply hasn't caught up — a different condition, same
+   * fix: wait and retry. SPEC §3: both are retryable, not fatal. The UI
+   * renders these as "waiting for confirmations", never as a failure.
    */
   get retryable(): boolean {
-    return this.code === 'BlockNotOnSourceChain' || this.status >= 500 || this.status === 429;
+    return (
+      this.code === 'BlockNotOnSourceChain' ||
+      /not attested/i.test(this.message) ||
+      this.status >= 500 ||
+      this.status === 429
+    );
   }
 }
 

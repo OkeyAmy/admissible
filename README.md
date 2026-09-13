@@ -490,6 +490,7 @@ admissible/
 | [SDK reference](docs/sdk.md) | Every exported function, with examples. |
 | [Registry reference](docs/registry.md) | The on-chain contract and how to query it. |
 | [Verification](docs/verify.md) | How independent verification works, and why it is trustworthy. |
+| [How lending works](docs/how-lending-works.md) | Plain-language: present, borrow, repay, eligibility, no jargon. |
 
 ## Scope, stated plainly
 

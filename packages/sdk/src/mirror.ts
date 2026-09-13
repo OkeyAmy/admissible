@@ -282,7 +282,18 @@ async function mirrorPrepared(
   }
 }
 
-/** One `execute()` call carrying one proved source transaction. */
+/**
+ * One `submit()` call carrying one proved source transaction.
+ *
+ * The deployed `AttestationRegistry` does not expose a usable `execute(...)`
+ * entrypoint directly: it wraps `ASCBase.execute` behind `submit(...)`, which
+ * stashes `(chainKey, blockHeight, sourceTxHash)` in transient storage before
+ * doing a self-call into `execute`; `_processAndEmitEvent` requires that
+ * context to be set ("Admissible: call submit(), not execute()"). A direct
+ * `execute()` call reverts before any state is written. `submit()`'s ABI
+ * also differs from raw `execute()`: it takes the source tx hash explicitly,
+ * and the proof and continuity data as tuples rather than flat parameters.
+ */
 export async function submitProof(
   registry: RegistryHandle,
   action: RegistryAction,
@@ -295,18 +306,17 @@ export async function submitProof(
     action,
     proof.chainKey,
     proof.headerNumber,
+    proof.txHash,
     proof.txBytes,
-    proof.merkleProof.root,
-    proof.merkleProof.siblings.map((s) => [s.hash, s.isLeft]),
-    proof.continuityProof.lowerEndpointDigest,
-    proof.continuityProof.roots,
+    [proof.merkleProof.root, proof.merkleProof.siblings.map((s) => [s.hash, s.isLeft])],
+    [proof.continuityProof.lowerEndpointDigest, proof.continuityProof.roots],
   ];
-  const data = iface.encodeFunctionData('execute', args);
+  const data = iface.encodeFunctionData('submit', args);
 
   const from = await registry.signer!.getAddress();
   const gas = await planGas(registry, data, from, proof.continuityProof.roots.length, gasLimitOverride);
 
-  const tx = await registry.contract.execute(...args, nonce === undefined ? { gasLimit: gas.gasLimit } : { gasLimit: gas.gasLimit, nonce });
+  const tx = await registry.contract.submit(...args, nonce === undefined ? { gasLimit: gas.gasLimit } : { gasLimit: gas.gasLimit, nonce });
   const receipt = await waitForReceipt(tx);
   return accountForReceipt(receipt, iface);
 }

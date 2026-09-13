@@ -5,6 +5,8 @@
   "explorer": "https://creditcoin-testnet.blockscout.com",
   "registry": "0xA972422a821F622bcC1a72d0B19242F1ae2C6047",
   "pool": "0x947c2ECCD2A754aCbf19A30F01450766B4938Ad6",
+  "poolSandbox": "0xBC47b3Ab8BD8A315253a66EaBFb9e7Eb02502deA",
+  "poolSandboxNote": "Wildcard, chainKey=1 (Sepolia), requiredAttester/requiredSchema=0 — deployed 2026-09-13 for the interactive present/borrow/repay demo, wired to the same registry above. 'pool' stays pinned to a real mainnet issuer for the credibility story.",
   "deployedAt": "2026-09-10T22:39:02.951Z",
   "deployer": "0xA5B3d738FB24C880a2BB1Bc4Ec65475489889714",
   "blockNumber": 5465943,

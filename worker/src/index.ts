@@ -22,15 +22,25 @@
  *     ASCBase entrypoint guarded to revert on direct calls; the real
  *     entrypoint is `submit(...)`. See submit-fix.ts for the full writeup.
  *
- * Revocation: `Revoked` events carry no `txid` in the easscan schema (verified
- * live via GraphQL introspection — only the ORIGINAL attesting tx's `txid` is
- * exposed), so easscan cannot resolve a revocation's source transaction. On
- * Sepolia (chainKey 1) this worker scans `eth_getLogs` directly for the
- * `Revoked` topic and reads `log.transactionHash` / `log.transactionIndex`
- * itself — no easscan round trip needed. On Ethereum mainnet (chainKey 3) the
- * public RPC has no `eth_getLogs`, so that path is structurally unavailable;
- * the worker says so explicitly (one receipts line per newly-revoked UID
- * easscan reports, status "failed", not silently skipped.
+ * Revocation discovery:
+ *  - Sepolia (chainKey 1): `Revoked` events carry no `txid` in the easscan
+ *    schema (verified live via GraphQL introspection — only the ORIGINAL
+ *    attesting tx's `txid` is exposed), so easscan cannot resolve a
+ *    revocation's source transaction. This worker scans `eth_getLogs` on the
+ *    Sepolia RPC for the `Revoked` topic and reads `log.transactionHash` /
+ *    `log.transactionIndex` itself.
+ *  - Mainnet (chainKey 3): the same easscan limitation applies, and the free
+ *    public RPC serves `eth_getLogs` only for a shallow recent window
+ *    (verified: ~1024 blocks; deeper ranges return an "archive requests
+ *    require a personal token" error on publicnode). Two paths, in priority
+ *    order:
+ *      1. If `ETHERSCAN_API_KEY` is set (free, etherscan.io): backfill via the
+ *         Etherscan V2 `getLogs` endpoint filtered on the `Revoked` topic,
+ *         walking newest-blocks-first from head. Etherscan indexes the full
+ *         history, so previously-unreachable old revocations become mirrorable
+ *         and the observed `revoked=false`-despite-easscan gap closes.
+ *      2. Otherwise, a rolling recent-window scan on the public RPC keeps new
+ *         revocations flowing while the deep history stays unmirrorable.
  *
  * Never double-submits: every group is checked against the registry's
  * `processedQueries` map (`isQueryProcessed`) before any prover/Creditcoin
@@ -38,12 +48,11 @@
  * in the SDK, applied here by hand because of the `submit()` workaround.
  */
 import './env.js';
-import { JsonRpcProvider, Network } from 'ethers';
+import { JsonRpcProvider, Network, type Log } from 'ethers';
 import {
   getRegistry,
   totals,
   listRecent,
-  listRevoked,
   groupByTx,
   hydrateBlocks,
   attestedHeight,
@@ -72,6 +81,47 @@ const MARGIN: Record<ChainKey, number> = { 1: 40, 3: 60 };
 const MAX_CYCLES = Number(process.env.WORKER_MAX_CYCLES ?? 0);
 const SEPOLIA_EAS = SOURCE_CHAINS[1].eas;
 const SEPOLIA_RPC = process.env.SEPOLIA_RPC ?? SOURCE_CHAINS[1].rpc;
+const MAINNET_RPC = process.env.MAINNET_RPC ?? SOURCE_CHAINS[3].rpc;
+const MAINNET_EAS = SOURCE_CHAINS[3].eas;
+
+/**
+ * Mainnet revocation discovery (chainKey 3). Free, no-key defaults and the
+ * measures taken to stay inside them:
+ *
+ *  - The free public RPC (`ethereum-rpc.publicnode.com`) serves `eth_getLogs`
+ *    only over a shallow recent window (~1024 blocks; deeper ranges error with
+ *    "Archive requests require a personal token" — verified live). The recent
+ *    scan therefore re-scans the rolling window every cycle instead of keeping
+ *    a forward cursor; `isQueryProcessed` makes that safe.
+ *  - The Etherscan V2 `getLogs` endpoint (free API key, etherscan.io) serves
+ *    the FULL mainnet history filtered by topic, which unblocks backfilling
+ *    old revocations end-to-end.
+ */
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY?.trim() || '';
+const ETHERSCAN_LOGS_URL = 'https://api.etherscan.io/v2/api';
+/** Etherscan V2 free tier: ~1 req/s. Chunks are kept small and paced. */
+const ETHERSCAN_CHUNK = Number(process.env.WORKER_MAINNET_REVOKE_CHUNK ?? 20_000);
+const ETHERSCAN_PACE_MS = Number(process.env.WORKER_ETHERSCAN_PACE_MS ?? 350);
+/** Hard per-cycle budget so a cycle neither starts a multi-hour backfill nor
+ *  hammers the free tier; the walk resumes from `state.mainnetRevokeLog`. */
+const MAINNET_REVOKE_GROUPS_PER_CYCLE = Number(process.env.WORKER_MAINNET_REVOKE_TAKE ?? 60);
+const MAINNET_REVOKE_BLOCKS_PER_CYCLE = Number(process.env.WORKER_MAINNET_REVOKE_BLOCKS ?? 250_000);
+/** Recent-window size used when no Etherscan key is configured. */
+const MAINNET_REVOKE_RECENT_WINDOW = Number(process.env.WORKER_MAINNET_REVOKE_WINDOW ?? 700);
+// Free mainnet RPCs are nondeterministically routed to archive-token-gated
+// backends for eth_getLogs; try several hosts before giving up on a cycle.
+const MAINNET_REVOKE_LOGS_RPCS = (process.env.WORKER_MAINNET_REVOKE_LOGS_RPCS ?? `${MAINNET_RPC},https://ethereum.publicnode.com,https://ethereum-rpc.publicnode.com`)
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+// How many consecutive cycles a slice may stall on `skipped-not-attested`
+// (unprovable tx) before the backfill abandons it and walks past. Bounds the
+// upstream prover's unknowable "will never be attestable" case so a single
+// >500KB revoke tx cannot starve fresh revocations forever. Abandoned groups
+// stay in the receipts file — nothing is silently dropped.
+const MAINNET_REVOKE_MAX_SKIPPED = Number(process.env.WORKER_MAINNET_REVOKE_MAX_SKIPPED ?? 3);
+/** Etherscan truncates big result sets; below this count we trust a chunk. */
+const ETHERSCAN_TRUSTED_LOG_COUNT = 500;
 
 let isShuttingDown = false;
 process.on('SIGINT', () => {
@@ -351,49 +401,240 @@ async function pollRevokeSepolia(provider: JsonRpcProvider, registry: RegistryHa
 }
 
 /**
- * Mainnet revocation discovery is structurally unavailable: easscan's schema
- * has no revocation-txid field (verified live via GraphQL introspection —
- * only the original attesting tx's `txid` is exposed) and Ethereum mainnet's
- * working public RPC has no archive `eth_getLogs` (SPEC.md §3), so there is
- * no way to obtain the Revoked event's own transaction for proving. Rather
- * than silently doing nothing, this logs the limitation as an explicit
- * failed attempt per newly-observed revoked UID — capped, and only once per
- * UID (`lastSeenRevokeTime` cursor).
+ * Etherscan V2 `getLogs`, filtered to the EAS `Revoked` topic on chainKey 3.
+ * Returns one entry per log. Free tier needs an API key (etherscan.io); the
+ * V2 endpoint is authenticated via `apikey` (V1 is deprecated — verified live:
+ * V1 answers "deprecated", V2 schema accepts `module=logs&action=getLogs`).
  */
-async function pollRevokeMainnetNotice(state: WorkerState): Promise<void> {
-  const rows = await listRevoked(3, 20).catch(() => []);
-  const cursor = state.chains['3'].lastSeenRevokeTime;
-  const fresh = rows.filter((r) => r.revocationTime > cursor);
-  if (fresh.length === 0) return;
+interface EtherscanLog {
+  blockNumber: string;
+  transactionHash: string;
+  transactionIndex: string;
+  data: string;
+}
 
-  for (const r of fresh.slice(0, 10)) {
-    await appendReceipt({
-      easUid: r.uid,
-      sourceChainKey: 3,
-      sourceTxHash: r.txid,
-      sourceBlock: null,
-      continuityRoots: null,
-      merkleSiblings: null,
-      queryId: null,
-      batchIndex: batchCounter++,
-      creditcoinTxHash: null,
-      gasUsed: null,
-      ctcCost: null,
-      proofLatencyMs: null,
-      submitLatencyMs: null,
-      status: 'failed',
-      error:
-        'Ethereum mainnet revocation discovery unavailable: easscan exposes no revocation-txid field (GraphQL introspection verified), and the working public mainnet RPC has no archive eth_getLogs (SPEC.md §3) to find the Revoked event directly. This UID is revoked on EAS mainnet per easscan but cannot be mirrored as revoked from this worker.',
-      attestationsWritten: null,
-      proofAttempts: null,
-      batchTxCount: 1,
-      producedBy: 'worker',
-      action: 'revoke',
-      timestamp: nowIso(),
-    });
+async function fetchEtherscanRevokeLogs(fromBlock: number, toBlock: number, key: string): Promise<EtherscanLog[]> {
+  const url = new URL(ETHERSCAN_LOGS_URL);
+  url.searchParams.set('chainid', '1');
+  url.searchParams.set('module', 'logs');
+  url.searchParams.set('action', 'getLogs');
+  url.searchParams.set('address', MAINNET_EAS);
+  url.searchParams.set('topic0', EAS_TOPICS.Revoked);
+  url.searchParams.set('fromBlock', String(fromBlock));
+  url.searchParams.set('toBlock', String(toBlock));
+  url.searchParams.set('apikey', key);
+  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+  if (!res.ok) throw new Error(`etherscan getLogs ${fromBlock}-${toBlock}: HTTP ${res.status}`);
+  const body = (await res.json()) as { status: string; message?: string; result?: EtherscanLog[] };
+  // Etherscan encodes a legitimate zero-match query as status "0" with
+  // message "No records found" and result: [] — not an error (verified live).
+  // Only status "0" with anything else, or a missing/non-array result, is
+  // a real failure worth retrying.
+  if (body.status === '0' && body.message === 'No records found' && Array.isArray(body.result)) {
+    return body.result;
   }
-  state.chains['3'].lastSeenRevokeTime = rows.reduce((m, r) => Math.max(m, r.revocationTime), cursor);
-  log(`mainnet revoke notice — ${fresh.length} newly-revoked UIDs logged as unresolvable (RPC limitation)`);
+  if (body.status !== '1' || !Array.isArray(body.result)) {
+    throw new Error(`etherscan getLogs ${fromBlock}-${toBlock}: ${String(body.message ?? body.status)}`);
+  }
+  return body.result;
+}
+
+function revokeGroupsFromLogs(logs: EtherscanLog[]): Map<string, Group> {
+  const groups = new Map<string, Group>();
+  for (const l of logs) {
+    // Revoked address-indexed(address,address,bytes32,bytes32): topics =
+    // [sig, recipient, attester, schemaUID], data = the non-indexed bytes32
+    // uid — a single bytes32 ABI-encodes as its raw 32 bytes (SPEC.md §3).
+    const uid = /^0x[0-9a-fA-F]{64}$/.test(l.data) ? l.data.toLowerCase() : null;
+    if (!uid) continue;
+    const block = Number(l.blockNumber);
+    const g = groups.get(l.transactionHash) ?? { txid: l.transactionHash, block, txIndex: Number(l.transactionIndex), uids: [] };
+    if (!g.uids.includes(uid)) g.uids.push(uid);
+    groups.set(l.transactionHash, g);
+  }
+  return groups;
+}
+
+/**
+ * Mainnet revocation backfill, newest-first over full history. Walks downward
+ * from `head - margin` in `ETHERSCAN_CHUNK` slices, submits every group found
+ * (dedupe is on-chain via `isQueryProcessed`), and only advances the cursor
+ * past a slice whose groups all reached a terminal outcome. A retryable
+ * prover failure (`skipped-not-attested`) leaves the cursor in place — but
+ * only for `MAINNET_REVOKE_MAX_SKIPPED` consecutive cycles, after which the
+ * slice is abandoned and the walk continues, so one permanently unprovable
+ * group cannot starve fresh revocations during continuous operation. Budgeted
+ * per cycle (blocks walked and groups submitted) so the first-ever boot does
+ * not start a multi-hour sweep.
+ */
+async function pollRevokeMainnetEtherscan(
+  mainnetHead: number,
+  registry: RegistryHandle,
+  nonces: NonceAllocator,
+  state: WorkerState,
+): Promise<number> {
+  const target = Math.max(0, mainnetHead - MARGIN[3]);
+  let cursor = Math.max(state.mainnetRevokeLog.fromBlock, 0);
+  if (cursor >= target) return 0;
+
+  let acted = 0;
+  let processedBlocks = 0;
+  let high = target;
+  while (high > cursor && processedBlocks < MAINNET_REVOKE_BLOCKS_PER_CYCLE) {
+    let low = Math.max(cursor, high - ETHERSCAN_CHUNK + 1);
+    let logs: EtherscanLog[] | null = null;
+    try {
+      logs = await fetchEtherscanRevokeLogs(low, high, ETHERSCAN_API_KEY);
+    } catch (err) {
+      log(`mainnet revoke etherscan ${low}-${high} failed: ${(err as Error).message}`);
+      break; // keep cursor; retried next cycle
+    }
+
+    // Etherscan free tier truncates oversized result sets — shrink the slice
+    // to a fixed tail and re-fetch rather than silently processing a partial
+    // and advancing past the remainder. (Rare: it needs 500+ Revoked logs in
+    // one 1000-block window.) A saturated 1000-block tail is the granularity
+    // limit of this cheap path; we process it and move on.
+    let shrinkFailed = false;
+    while (logs[0] && logs.length >= ETHERSCAN_TRUSTED_LOG_COUNT && high - low > 1_000) {
+      low = high - 999;
+      try {
+        logs = await fetchEtherscanRevokeLogs(low, high, ETHERSCAN_API_KEY);
+      } catch (err) {
+        log(`mainnet revoke etherscan ${low}-${high} (shrunk) failed: ${(err as Error).message}`);
+        shrinkFailed = true;
+        break;
+      }
+    }
+    // A failed shrink re-fetch leaves `logs` holding the stale, untrusted
+    // oversized result from before the shrink attempt — processing it and
+    // advancing the cursor past `high` would silently drop whatever
+    // revocations didn't fit in that truncated set. Retry the whole slice
+    // next cycle instead, same as the outer fetch failure above.
+    if (shrinkFailed) break;
+    if (logs.length === 0) {
+      cursor = low;
+      state.mainnetRevokeLog.fromBlock = cursor;
+      processedBlocks += high - low + 1;
+      high = cursor - 1;
+      await sleep(ETHERSCAN_PACE_MS);
+      continue;
+    }
+
+    const groups = revokeGroupsFromLogs(logs);
+    await sleep(ETHERSCAN_PACE_MS);
+
+    let budgetHit = false;
+    let unattested = 0;
+    for (const g of groups.values()) {
+      if (acted >= MAINNET_REVOKE_GROUPS_PER_CYCLE) {
+        budgetHit = true; // budget hit — leave the slice for next cycle
+        break;
+      }
+      const outcome = await mirrorOrRevokeGroup(3, g, REVOKE_ACTION, registry, nonces);
+      if (outcome === 'mirrored') acted++;
+      if (outcome === 'skipped-not-attested') unattested++;
+      if (outcome === 'failed') log(`mainnet revoke group ${g.txid} (block ${g.block}) failed permanently; logged to receipts and skipped`);
+    }
+
+    if (budgetHit) break;
+
+    if (unattested > 0) {
+      const prev = state.mainnetRevokeStuck;
+      state.mainnetRevokeStuck = prev.atBlock === low
+        ? { atBlock: low, count: prev.count + 1 }
+        : { atBlock: low, count: 1 };
+      const stuck = state.mainnetRevokeStuck;
+      if (stuck.count < MAINNET_REVOKE_MAX_SKIPPED) {
+        log(`mainnet revoke: slice anchored ${low} unattested (${unattested} group(s)) — cycle ${stuck.count}/${MAINNET_REVOKE_MAX_SKIPPED}; leaving for next cycle`);
+        break;
+      }
+      log(`mainnet revoke: abandoning slice anchored ${low} after ${stuck.count} unattested cycles — ${unattested} unprovable group(s) logged to receipts and skipped`);
+      state.mainnetRevokeStuck = { atBlock: 0, count: 0 }; // fall through: advance the walk
+    }
+
+    cursor = low;
+    state.mainnetRevokeLog.fromBlock = cursor;
+    processedBlocks += high - low + 1;
+    high = cursor - 1;
+  }
+
+  log(
+    `mainnet revoke pass — etherscan ${state.mainnetRevokeLog.fromBlock}-${target}, ` +
+      `${acted} newly revoked, ${processedBlocks} blocks walked this cycle`,
+  );
+  return acted;
+}
+
+/** No-key fallback: rolling recent-window scan on the public RPC (~1024-block
+ *  free window on publicnode, verified live). Re-scans the window every cycle;
+ *  on-chain dedupe keeps it idle-cheap when nothing new has been revoked. */
+async function pollRevokeMainnetRecent(
+  provider: JsonRpcProvider,
+  registry: RegistryHandle,
+  nonces: NonceAllocator,
+): Promise<number> {
+  const head = await provider.getBlockNumber().catch((err) => {
+    log(`mainnet revoke recent head failed: ${(err as Error).message}`);
+    return -1;
+  });
+  if (head < 0) return 0;
+  const safeTo = Math.max(0, head - MARGIN[3]);
+  const from = Math.max(0, safeTo - MAINNET_REVOKE_RECENT_WINDOW);
+
+  let logs: Log[] | null = null;
+  for (const rpc of MAINNET_REVOKE_LOGS_RPCS) {
+    try {
+      const p = rpc === MAINNET_RPC
+        ? provider
+        : new JsonRpcProvider(rpc, Network.from(1), { staticNetwork: true, batchMaxCount: 1 });
+      try {
+        logs = await p.getLogs({ address: MAINNET_EAS, topics: [EAS_TOPICS.Revoked], fromBlock: from, toBlock: safeTo });
+        break;
+      } finally {
+        if (p !== provider) p.destroy();
+      }
+    } catch (err) {
+      log(`mainnet revoke recent scan ${from}-${safeTo} on ${rpc} failed: ${(err as Error).message}`);
+      logs = null;
+    }
+  }
+  if (!logs || logs.length === 0) {
+    log(`mainnet revoke pass — recent scan blocks ${from}-${safeTo}: 0 revoke logs (no Etherscan key set; historical backfill off)`);
+    return 0;
+  }
+
+  const groups = new Map<string, Group>();
+  for (const l of logs) {
+    const uid = /^0x[0-9a-fA-F]{64}$/.test(l.data) ? l.data.toLowerCase() : null;
+    if (!uid) continue;
+    const g = groups.get(l.transactionHash) ?? { txid: l.transactionHash, block: l.blockNumber, txIndex: l.transactionIndex, uids: [] };
+    if (!g.uids.includes(uid)) g.uids.push(uid);
+    groups.set(l.transactionHash, g);
+  }
+
+  let acted = 0;
+  for (const g of groups.values()) {
+    const outcome = await mirrorOrRevokeGroup(3, g, REVOKE_ACTION, registry, nonces);
+    if (outcome === 'mirrored') acted++;
+  }
+  log(`mainnet revoke pass — recent scan blocks ${from}-${safeTo}, ${groups.size} revoke tx groups, ${acted} newly revoked`);
+  return acted;
+}
+
+async function pollRevokeMainnet(
+  provider: JsonRpcProvider,
+  registry: RegistryHandle,
+  nonces: NonceAllocator,
+  state: WorkerState,
+): Promise<number> {
+  if (!ETHERSCAN_API_KEY) return pollRevokeMainnetRecent(provider, registry, nonces);
+  const head = await provider.getBlockNumber().catch((err) => {
+    log(`mainnet head failed: ${(err as Error).message}`);
+    return -1;
+  });
+  if (head < 0) return 0;
+  return pollRevokeMainnetEtherscan(head, registry, nonces, state);
 }
 
 async function main() {
@@ -408,6 +649,7 @@ async function main() {
 
   const nonces = new NonceAllocator(registry.signer, signerAddress);
   const sepoliaProvider = new JsonRpcProvider(SEPOLIA_RPC, Network.from(11155111), { staticNetwork: true, batchMaxCount: 1 });
+  const mainnetProvider = new JsonRpcProvider(MAINNET_RPC, Network.from(1), { staticNetwork: true, batchMaxCount: 1 });
 
   const state = loadState();
   let cycle = 0;
@@ -420,8 +662,8 @@ async function main() {
       const mirrored1 = await pollMirror(1, registry, nonces, state);
       const mirrored3 = await pollMirror(3, registry, nonces, state);
       const revoked1 = await pollRevokeSepolia(sepoliaProvider, registry, nonces, state);
-      await pollRevokeMainnetNotice(state);
-      log(`cycle ${cycle} done — mirrored ${mirrored1 + mirrored3} (sepolia ${mirrored1}, mainnet ${mirrored3}), revoked ${revoked1}`);
+      const revoked3 = await pollRevokeMainnet(mainnetProvider, registry, nonces, state);
+      log(`cycle ${cycle} done — mirrored ${mirrored1 + mirrored3} (sepolia ${mirrored1}, mainnet ${mirrored3}), revoked ${revoked1 + revoked3} (sepolia ${revoked1}, mainnet ${revoked3})`);
     } catch (err) {
       log(`cycle ${cycle} FAILED: ${(err as Error).message}`);
     }
@@ -437,6 +679,7 @@ async function main() {
   const after = await totals({ registry });
   log(`registry at shutdown: totalMirrored=${after.totalMirrored} totalRevoked=${after.totalRevoked}`);
   sepoliaProvider.destroy();
+  mainnetProvider.destroy();
   registry.provider.destroy();
   log('worker stopped.');
 }
