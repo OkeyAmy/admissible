@@ -1,33 +1,51 @@
-import { median, percentile } from './format';
 import type { ReceiptRow } from './types';
 
-export interface ReceiptsSummary {
-  attempts: number;
-  mirrored: number;
-  failed: number;
-  other: number;
-  distinctUids: number;
-  distinctCreditcoinTxs: number;
-  proofMedianMs: number | null;
-  proofP95Ms: number | null;
-  submitMedianMs: number | null;
-  submitP95Ms: number | null;
-  continuityRootsMin: number | null;
-  continuityRootsMax: number | null;
-  totalCtc: number | null;
-  byChainKey: Record<number, number>;
-  firstTimestamp: string | null;
-  lastTimestamp: string | null;
+export interface BenchLatencyStats {
+  median: number | null;
+  p95: number | null;
+  min: number | null;
+  max: number | null;
+  n: number;
 }
 
-export interface ReceiptsPayload {
+export interface BenchChainStats {
+  chainKey: number;
+  attestationsAttempted: number;
+  mirrored: number;
+  alreadyMirrored: number;
+  failed: number;
+  distinctTransactions: number;
+  /** Present only in summary.json regenerated after the distinctUids rollout. */
+  distinctUids?: number;
+  ctcSpent: string;
+  continuityRootsMin?: number | null;
+  continuityRootsMax?: number | null;
+  proofLatencyMs: BenchLatencyStats;
+  submitLatencyMs: BenchLatencyStats;
+}
+
+export type BenchOverall = Omit<BenchChainStats, 'chainKey'>;
+
+/** Shape of receipts/summary.json as written by the bench workspace. */
+export interface BenchSummary {
+  generatedAt: string;
+  receiptsFile: string;
+  totalLines: number;
+  firstTimestamp?: string | null;
+  lastTimestamp?: string | null;
+  overall: BenchOverall;
+  perChainKey: BenchChainStats[];
+}
+
+/** A single page of the server-side paged mirror log. */
+export interface ReceiptsPage {
   rows: ReceiptRow[];
-  summary: ReceiptsSummary | null;
-  /** summary.json as written by the bench workspace, if present. */
-  externalSummary: Record<string, unknown> | null;
-  present: string[];
-  /** Non-fatal notes: malformed lines, missing files. */
-  notes: string[];
+  page: number;
+  pageSize: number;
+  totalMatched: number;
+  totalLines: number;
+  totalPages: number;
+  query: string;
 }
 
 async function tryFetchText(path: string): Promise<string | null> {
@@ -43,78 +61,44 @@ async function tryFetchText(path: string): Promise<string | null> {
   }
 }
 
-export async function loadReceipts(): Promise<ReceiptsPayload> {
+/**
+ * Fetches one page of mirrors.jsonl from the server-side paging endpoint
+ * (?page=&pageSize=&q=). The browser only ever parses the current page, never
+ * the whole file — see the download link in Receipts.tsx for full history.
+ */
+export async function loadReceiptsPage(opts: { page: number; pageSize: number; query: string }): Promise<{ page: ReceiptsPage | null; externalSummary: BenchSummary | null; present: string[]; notes: string[] }> {
   const notes: string[] = [];
   const present: string[] = [];
 
-  const [jsonlText, summaryText] = await Promise.all([
-    tryFetchText('/receipts/mirrors.jsonl'),
+  const params = new URLSearchParams();
+  params.set('page', String(opts.page));
+  params.set('pageSize', String(opts.pageSize));
+  if (opts.query.trim()) params.set('q', opts.query.trim());
+
+  const [jsonText, summaryText] = await Promise.all([
+    tryFetchText(`/receipts/mirrors.jsonl?${params.toString()}`),
     tryFetchText('/receipts/summary.json'),
   ]);
 
-  let externalSummary: Record<string, unknown> | null = null;
+  let externalSummary: BenchSummary | null = null;
   if (summaryText) {
     present.push('summary.json');
     try {
-      externalSummary = JSON.parse(summaryText) as Record<string, unknown>;
+      externalSummary = JSON.parse(summaryText) as BenchSummary;
     } catch {
       notes.push('receipts/summary.json is present but is not valid JSON.');
     }
   }
 
-  const rows: ReceiptRow[] = [];
-  if (jsonlText) {
+  let paged: ReceiptsPage | null = null;
+  if (jsonText) {
     present.push('mirrors.jsonl');
-    let bad = 0;
-    for (const line of jsonlText.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        rows.push(JSON.parse(trimmed) as ReceiptRow);
-      } catch {
-        bad += 1;
-      }
+    try {
+      paged = JSON.parse(jsonText) as ReceiptsPage;
+    } catch {
+      notes.push('receipts/mirrors.jsonl paging endpoint returned invalid JSON.');
     }
-    if (bad) notes.push(`${bad} line(s) in mirrors.jsonl could not be parsed and were skipped.`);
   }
 
-  return {
-    rows,
-    summary: rows.length ? summarise(rows) : null,
-    externalSummary,
-    present,
-    notes,
-  };
-}
-
-export function summarise(rows: ReceiptRow[]): ReceiptsSummary {
-  const mirrored = rows.filter((r) => r.status === 'mirrored');
-  const failed = rows.filter((r) => r.status === 'failed' || r.status === 'error');
-  const proof = rows.map((r) => r.proofLatencyMs).filter((v): v is number => typeof v === 'number');
-  const submit = mirrored.map((r) => r.submitLatencyMs).filter((v): v is number => typeof v === 'number');
-  const roots = rows.map((r) => r.continuityRoots).filter((v): v is number => typeof v === 'number');
-  const costs = rows.map((r) => Number(r.ctcCost)).filter((v) => Number.isFinite(v));
-  const timestamps = rows.map((r) => r.timestamp).filter(Boolean).sort();
-
-  const byChainKey: Record<number, number> = {};
-  for (const r of rows) byChainKey[r.sourceChainKey] = (byChainKey[r.sourceChainKey] ?? 0) + 1;
-
-  return {
-    attempts: rows.length,
-    mirrored: mirrored.length,
-    failed: failed.length,
-    other: rows.length - mirrored.length - failed.length,
-    distinctUids: new Set(rows.map((r) => r.easUid?.toLowerCase()).filter(Boolean)).size,
-    distinctCreditcoinTxs: new Set(mirrored.map((r) => r.creditcoinTxHash?.toLowerCase()).filter(Boolean)).size,
-    proofMedianMs: median(proof),
-    proofP95Ms: percentile(proof, 95),
-    submitMedianMs: median(submit),
-    submitP95Ms: percentile(submit, 95),
-    continuityRootsMin: roots.length ? Math.min(...roots) : null,
-    continuityRootsMax: roots.length ? Math.max(...roots) : null,
-    totalCtc: costs.length ? costs.reduce((a, b) => a + b, 0) : null,
-    byChainKey,
-    firstTimestamp: timestamps[0] ?? null,
-    lastTimestamp: timestamps[timestamps.length - 1] ?? null,
-  };
+  return { page: paged, externalSummary, present, notes };
 }

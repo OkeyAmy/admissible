@@ -13,8 +13,11 @@ const outDir = join(webRoot, 'public', 'receipts');
 mkdirSync(outDir, { recursive: true });
 
 const wanted = [
+  // mirrors.jsonl is deliberately NOT copied here: it grows continuously (100 MB+)
+  // and would be a stale build-time snapshot. serve-static.mjs serves the live
+  // file directly from receipts/ at runtime; this build-tool copy only served
+  // local vite dev, where it would also defeat the ?tail= bounding.
   ['receipts/summary.json', 'summary.json'],
-  ['receipts/mirrors.jsonl', 'mirrors.jsonl'],
 ];
 
 const present = [];

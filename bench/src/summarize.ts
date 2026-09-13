@@ -30,7 +30,10 @@ interface ChainStats {
   alreadyMirrored: number;
   failed: number;
   distinctTransactions: number;
+  distinctUids: number;
   ctcSpent: string;
+  continuityRootsMin: number | null;
+  continuityRootsMax: number | null;
   proofLatencyMs: { median: number | null; p95: number | null; min: number | null; max: number | null; n: number };
   submitLatencyMs: { median: number | null; p95: number | null; min: number | null; max: number | null; n: number };
 }
@@ -44,8 +47,10 @@ function statsFor(lines: ReceiptLine[]): Omit<ChainStats, 'chainKey'> {
 
   const proofLat = lines.map((l) => l.proofLatencyMs).filter((v): v is number => typeof v === 'number');
   const submitLat = lines.map((l) => l.submitLatencyMs).filter((v): v is number => typeof v === 'number');
+  const roots = lines.map((l) => l.continuityRoots).filter((v): v is number => typeof v === 'number');
   const proofSorted = [...proofLat].sort((a, b) => a - b);
   const submitSorted = [...submitLat].sort((a, b) => a - b);
+  const rootsSorted = [...roots].sort((a, b) => a - b);
 
   let ctcSpentWei = 0n;
   for (const l of lines) {
@@ -72,7 +77,10 @@ function statsFor(lines: ReceiptLine[]): Omit<ChainStats, 'chainKey'> {
     alreadyMirrored: already.length,
     failed: failed.length,
     distinctTransactions: txHashes.size,
+    distinctUids: new Set(lines.map((l) => l.easUid?.toLowerCase()).filter(Boolean)).size,
     ctcSpent,
+    continuityRootsMin: rootsSorted[0] ?? null,
+    continuityRootsMax: rootsSorted[rootsSorted.length - 1] ?? null,
     proofLatencyMs: {
       median: median(proofLat),
       p95: percentile(proofSorted, 95),
@@ -116,10 +124,14 @@ async function main() {
 
   const overall = statsFor(lines);
 
+  const timestamps = lines.map((l) => l.timestamp).filter(Boolean).sort();
+
   const summary = {
     generatedAt: new Date().toISOString(),
     receiptsFile: 'receipts/mirrors.jsonl',
     totalLines: lines.length,
+    firstTimestamp: timestamps[0] ?? null,
+    lastTimestamp: timestamps[timestamps.length - 1] ?? null,
     overall,
     perChainKey: perChain,
   };

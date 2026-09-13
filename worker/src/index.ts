@@ -67,6 +67,7 @@ import {
   SOURCE_CHAINS,
   type ChainKey,
   type TxGroup,
+  type EasAttestation,
   type RegistryHandle,
 } from '@admissible/sdk';
 import { submitViaRegistry } from './submit-fix.js';
@@ -75,6 +76,13 @@ import { loadState, saveState, type WorkerState } from './state.js';
 
 const POLL_INTERVAL_MS = Number(process.env.WORKER_POLL_INTERVAL_MS ?? 25_000);
 const MIRROR_TAKE = Number(process.env.WORKER_MIRROR_TAKE ?? 80);
+/** easscan `time: desc` returns offchain attestations (no L1 txid) first on
+ *  mainnet — verified 2026-09-13: the newest ~120 rows were all offchain,
+ *  starving a single take-80 pull. Page past them until enough on-chain
+ *  (txid-bearing) rows are collected, bounded below so one cycle can't hammer
+ *  easscan or stall on an exhausted schema. */
+const MIRROR_PAGE = Number(process.env.WORKER_MIRROR_PAGE ?? 100);
+const MIRROR_MAX_SKIP = Number(process.env.WORKER_MIRROR_MAX_SKIP ?? 2_000);
 const REVOKE_LOG_CHUNK = Number(process.env.WORKER_REVOKE_LOG_CHUNK ?? 4_000);
 const MARGIN: Record<ChainKey, number> = { 1: 40, 3: 60 };
 /** Bound the demo run; unset (0) means run forever, matching the example's shape. */
@@ -330,10 +338,22 @@ async function pollMirror(chainKey: ChainKey, registry: RegistryHandle, nonces: 
   });
   if (head < 0) return 0;
 
-  const rows = await listRecent(chainKey, MIRROR_TAKE).catch((err) => {
-    log(`chainKey ${chainKey}: listRecent failed: ${(err as Error).message}`);
-    return [];
-  });
+  // easscan orders by attestation time desc, and offchain attestations (empty
+  // txid) now dominate the newest mainnet rows. A single take-80 pull returns
+  // nothing mirrorable; page forward until we have take on-chain rows or hit
+  // the skip cap. Offchain rows are still counted for lastSeenAttestTime so the
+  // cursor doesn't regress.
+  const rows: EasAttestation[] = [];
+  const scanned: EasAttestation[] = [];
+  for (let skip = 0; rows.length < MIRROR_TAKE && skip <= MIRROR_MAX_SKIP; skip += MIRROR_PAGE) {
+    const page = await listRecent(chainKey, MIRROR_PAGE, { skip }).catch((err) => {
+      log(`chainKey ${chainKey}: listRecent failed at skip ${skip}: ${(err as Error).message}`);
+      return [] as EasAttestation[];
+    });
+    if (page.length === 0) break;
+    scanned.push(...page);
+    for (const r of page) if (r.txid) rows.push(r);
+  }
   if (rows.length === 0) return 0;
 
   let groups: TxGroup[] = groupByTx(rows, chainKey);
@@ -348,10 +368,10 @@ async function pollMirror(chainKey: ChainKey, registry: RegistryHandle, nonces: 
     if (outcome === 'mirrored') acted++;
   }
 
-  const maxTime = rows.reduce((m, r) => Math.max(m, r.time), state.chains[String(chainKey) as '1' | '3'].lastSeenAttestTime);
+  const maxTime = scanned.reduce((m, r) => Math.max(m, r.time), state.chains[String(chainKey) as '1' | '3'].lastSeenAttestTime);
   state.chains[String(chainKey) as '1' | '3'].lastSeenAttestTime = maxTime;
 
-  log(`chainKey ${chainKey}: mirror pass — ${rows.length} easscan rows, ${groups.length} tx groups, ${ready.length} past reorg margin, ${acted} newly mirrored`);
+  log(`chainKey ${chainKey}: mirror pass — scanned ${scanned.length} easscan rows, ${rows.length} on-chain, ${groups.length} tx groups, ${ready.length} past reorg margin, ${acted} newly mirrored`);
   return acted;
 }
 

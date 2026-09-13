@@ -29,21 +29,6 @@ export function formatIso(iso: string | undefined | null): string {
   return d.toISOString().replace('T', ' ').replace(/\.\d+Z$/, 'Z');
 }
 
-export function percentile(values: number[], p: number): number | null {
-  const sorted = values.filter((v) => Number.isFinite(v)).slice().sort((a, b) => a - b);
-  if (!sorted.length) return null;
-  if (sorted.length === 1) return sorted[0];
-  const rank = (p / 100) * (sorted.length - 1);
-  const low = Math.floor(rank);
-  const high = Math.ceil(rank);
-  if (low === high) return sorted[low];
-  return sorted[low] + (sorted[high] - sorted[low]) * (rank - low);
-}
-
-export function median(values: number[]): number | null {
-  return percentile(values, 50);
-}
-
 export function elapsedLabel(startedAt: number, now: number): string {
   const s = Math.max(0, (now - startedAt) / 1000);
   if (s < 60) return `${s.toFixed(1)}s`;
