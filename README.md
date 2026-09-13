@@ -17,6 +17,70 @@ check it.
 
 ---
 
+## How it works — no jargon
+
+If you're new to EAS or Creditcoin, start here. The rest of this document is for the
+engineering-minded; this section is for humans.
+
+**What is an "attestation"?** Think of it as a *signed statement* living on Ethereum. A
+company attests "this wallet passed our KYC check". An app attests "this account verified
+its phone number". A reputation system attests "this person is trustworthy". Anyone can
+make one, and Ethereum records it so it can be checked later. **EAS** (the Ethereum
+Attestation Service) is the public filing cabinet where these statements live — there are
+millions of them.
+
+**What was the problem?** These statements are stuck where they were written. A lending
+app on Creditcoin can't see them, so a borrower said "I have a verified KYC attestation on
+Ethereum" and the lender had to take that on trust — or ignore it.
+
+**What Admissible does.** It takes that Ethereum statement and *files a copy of its proof
+onto Creditcoin* — like a court admitting evidence from another country. Once filed, any
+Creditcoin contract can read it directly: *borrowers present verified credentials, lenders
+verify them on-chain, no one guesses.*
+
+**The core idea is a layer, not an app.** The product isn't a tool for *you* to look at
+attestations — it's a foundation for **anyone building on Creditcoin** who wants to base a
+contract's behaviour on an Ethereum fact. A lending app can lend only against a verified
+credential; an airdrop can drop only to verified humans; a DAO can gate membership on a
+reputation attestation. All of them import one registry (`IAdmissibleRegistry`, ~10 lines
+of Solidity) and read Ethereum attestations as if they'd been written on Creditcoin in the
+first place. That building block — the deployed registry plus the mirroring SDK (npm
+package `@admissible/sdk`) — is the whole idea. Everything else on this page is either an
+explanation of it or a working demonstration of it, which brings us to:
+
+**What "mirroring" and "a receipt" mean.** "Mirroring" is the act of filing that proof —
+copying the evidence, not the claim. Every time the system tries, it writes **one line of
+text to a ledger file, `receipts/mirrors.jsonl`**. That line is the receipt: *which*
+attestation was attempted, *where* it came from (Ethereum mainnet or Sepolia), how big the
+proof was, which Creditcoin transaction filed it, how long it took, what it cost, and
+whether it succeeded or failed. **Failures get receipts too** — a ledger with only
+successes is less trustworthy, not more (see [Evidence](#evidence)).
+
+**What pasting a UID does.** A "UID" is the filing number of one attestation. Paste it into
+the app and the page shows you, live, the five steps that happen in the background:
+
+1. *Resolve* — find the Ethereum transaction the attestation was written in.
+2. *Wait* — Creditcoin's attestors must certify that Ethereum block first (a few minutes).
+3. *Prove* — the Attestcoin service builds a mathematical proof that the transaction happened.
+4. *File* — the proof is submitted to Creditcoin; its native verifier checks it on-chain.
+5. *Mirrored* — the attestation now lives on both chains, and any Creditcoin contract can read it.
+
+**One honest limit.** Only attestations that were written *in a transaction* can be proved
+this way. Some attestations are signed "off-chain" and never touch Ethereum at all — those
+have no transaction, so there is nothing to prove, and the app tells you so rather than
+pretending. The difference is explained in detail [below](#on-chain-vs-off-chain-attestations--what-can-be-mirrored-and-why).
+
+**What the lending pool shows.** `CredentialGatedPool` exists **only to demonstrate the idea** — it is not the
+product. It is a working example of the payoff: a Creditcoin lending pool that lends only to someone *presenting a
+valid, non-revoked, mirrored Ethereum credential*. It is deliberately pinned to one real-world issuer on mainnet — so
+not just any UID works, only that issuer's. That's the point: it's the same strictness a real lender would want. The
+pool page in the web app (route `/pool`, plain-language explanation in
+[docs/how-lending-works.md](docs/how-lending-works.md)) lets you check any
+address and tells you, in plain language, exactly why someone is or isn't eligible. Swap that lender for any other
+Creditcoin use case — the layer is the same; only the rule changes.
+
+---
+
 ## Deployed on Creditcoin CC3 testnet
 
 | | |
@@ -264,6 +328,12 @@ Longer walkthrough: [docs/quickstart.md](docs/quickstart.md).
 
 Claims here are counts and percentiles. There are no adjectives in this section on
 purpose.
+
+**Skim this if that's all the patience you have:** the project ran for real. It mirrored
+hundreds of real Ethereum attestations onto Creditcoin testnet, recorded everything in
+`receipts/mirrors.jsonl` (one line per attempt, failures included), and every number
+below was measured live, not estimated. The judge's one-command check at the top of this
+file re-verifies any single mirror from two independent sources. The detail follows.
 
 ### Pre-build feasibility probe — 2026-09-10, before any product code
 

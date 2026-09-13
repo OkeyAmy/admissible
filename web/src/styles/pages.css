@@ -128,6 +128,28 @@
   -webkit-text-stroke: 1px var(--graphite);
 }
 
+.verify-outcome-hint {
+  margin-top: 1.1rem;
+  border-left: 2px solid var(--warm-light);
+  padding: 0.15rem 0 0.15rem 0.9rem;
+  font-size: 0.875rem;
+  color: var(--graphite-soft);
+  max-width: var(--measure);
+}
+
+.verify-outcome-hint p {
+  margin-top: 0.6rem;
+}
+
+.verify-outcome-hint p:first-child {
+  margin-top: 0;
+}
+
+.verify-outcome-hint strong {
+  color: var(--graphite);
+  font-weight: 500;
+}
+
 .verify-table {
   margin-top: 1.6rem;
 }

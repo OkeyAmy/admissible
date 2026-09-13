@@ -105,6 +105,15 @@ export const EXAMPLE_UIDS: { uid: string; chainKey: ChainKey; note: string }[] =
 ];
 
 /**
+ * The one credential the pinned `CredentialGatedPool` accepts. Surfaces in
+ * the Pool page's "find a real holder from easscan yourself" recipe; any
+ * recipients easscan returns under this attester+schema pair are eligible.
+ */
+export const POOL_REQUIRED_ATTESTER = '0x45C07600825E79e36629537BFcAC64cfB285B5ae';
+export const POOL_REQUIRED_SCHEMA = '0x3969bb076acfb992af54d51274c5c868641ca5344e1aacd0b1f5e4f80ac0822f';
+export const POOL_REQUIRED_CHAIN_KEY: ChainKey = 3;
+
+/**
  * Real holders of the pool's required (attester, schema) pair on Ethereum
  * mainnet, resolved live via easscan on 2026-09-12 and confirmed already
  * mirrored + valid on the registry (isValid == true for all four). None of
